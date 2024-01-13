@@ -62,7 +62,7 @@
 #define BUTTON_ADC_MARGIN 20
 #define BUTTON_PRESS_SHORT 10
 #define BUTTON_PRESS_LONG 1000
-#define SLEEP_TIME 3  // In seconds
+#define SLEEP_TIME 2  // In seconds
 
 // EEPROM Addresses
 // Why not just use a struct for all of EEPROM? RAM is too scarce to work with the whole struct at once.
@@ -80,10 +80,10 @@
 #define BUTTON_2_ADC 730
 // #define BUTTON_3_ADC 937
 #define BUTTON_3_ADC 840
-#define BUTTONS_1_AND_2_ADC 456
-#define BUTTONS_2_AND_3_ADC 689
-#define BUTTONS_1_AND_3_ADC 527
-#define BUTTONS_ALL 440
+// #define BUTTONS_1_AND_2_ADC 456
+// #define BUTTONS_2_AND_3_ADC 689
+// #define BUTTONS_1_AND_3_ADC 527
+// #define BUTTONS_ALL 440
 
 // Enumerations
 enum class KeyerState {IDLE, DIT, DAH, CHARSPACE, PLAYBACK, UART};
@@ -113,10 +113,6 @@ Morse morse(KEY_OUTPUT, keyer_speed);
 
 ISR (PCINT0_vect)        // Interrupt service routine 
 {
-  // sleep_disable();                         // first thing after waking from sleep: disable sleep...
-  // GIMSK &= (~(1 << PCIE));                 // Turn off pin change interrupts
-  // wdt_off();
-  // power_all_enable();
   reset_sleep_timer();
 }
 
@@ -125,31 +121,18 @@ ISR (WDT_vect)
   // Check to see if a button is being pressed
   // If so, wake up. Otherwise, go back to sleep
   // ADCSRA |= (1 << ADEN);                  // Enable ADC
-  button_adc = analogRead(BUTTON_INPUT);
-  if (button_adc < 1020)
-  {
-    // sleep_disable();
-    // digitalWrite(SIDETONE_OUTPUT, LOW);
-    reset_sleep_timer();
-  }
-  else
-  {
-    sleep_timeout = 0;  // Put back to sleep immediately in loop
-  }
-  // sleep_disable();
-  digitalWrite(SIDETONE_OUTPUT, led ? HIGH : LOW);
-  led = !led;
+  // button_adc = analogRead(BUTTON_INPUT);
+  // if (button_adc < 1020)
+  // {
+  //   reset_sleep_timer();
+  // }
+  // else
+  // {
+  //   sleep_timeout = 0;  // Put back to sleep immediately in loop
+  // }
+  // digitalWrite(SIDETONE_OUTPUT, led ? HIGH : LOW);
+  // led = !led;
   // ADCSRA &= (~(1 << ADEN));                // Disable ADC
-
-  // noInterrupts();
-  // power_all_disable();                     // Turn off all peripherals
-  // sleep_enable();                          // enables the sleep bit in the mcucr register so sleep is possible
-  // ADCSRA &= (~(1 << ADEN));                // Disable ADC
-  // GIMSK |= (1 << PCIE);                    // Turn on pin change interrupts
-  // PCMSK |= bit(PCINT0) | bit(PCINT1);
-  // interrupts();
-  // sleep_mode();                            // Put controller to sleep
-  // sleep_timeout = 0;  // Put back to sleep immediately in loop
 }
 
 // Timer Callbacks
@@ -271,7 +254,7 @@ bool process_keyer_sm(void *)
       reset_sleep_timer();
       if (curr_keyer_state == KeyerState::UART)
       {
-        digitalWrite(SIDETONE_OUTPUT, HIGH);
+        // digitalWrite(SIDETONE_OUTPUT, HIGH);
         curr_keyer_state = KeyerState::IDLE;
         Serial.println("Ending UART Mode");
         Serial.end();
@@ -282,7 +265,7 @@ bool process_keyer_sm(void *)
       }
       else
       {
-        digitalWrite(SIDETONE_OUTPUT, LOW);
+        // digitalWrite(SIDETONE_OUTPUT, LOW);
         curr_keyer_state = KeyerState::UART;
         // Toggle the pin modes for UART service
         pinMode(PADDLE_RING, OUTPUT);
@@ -440,17 +423,17 @@ bool process_keyer_sm(void *)
       }
       break;
     case KeyerState::CHARSPACE:
-      if (next_keyer_state == KeyerState::IDLE)
-      {
-        if (paddle_ring_active)
-        {
-          next_keyer_state = KeyerState::DAH;
-        }
-        else if (paddle_tip_active)
-        {
-          next_keyer_state = KeyerState::DIT;
-        }
-      }
+      // if (next_keyer_state == KeyerState::IDLE)
+      // {
+      //   if (paddle_ring_active)
+      //   {
+      //     next_keyer_state = KeyerState::DAH;
+      //   }
+      //   else if (paddle_tip_active)
+      //   {
+      //     next_keyer_state = KeyerState::DIT;
+      //   }
+      // }
       break;
     case KeyerState::PLAYBACK:
       reset_sleep_timer();
@@ -516,7 +499,7 @@ bool process_keyer_sm(void *)
               // Serial.println(buf);
               break;
             case 'X':  // Exit UART mode
-              digitalWrite(SIDETONE_OUTPUT, HIGH);
+              // digitalWrite(SIDETONE_OUTPUT, HIGH);
               curr_keyer_state = KeyerState::IDLE;
               Serial.println("Ending UART Mode");
               Serial.end();
@@ -547,6 +530,17 @@ bool ditdah_expire(void *)
 
 bool charspace_expire(void *)
 {
+  if (next_keyer_state == KeyerState::IDLE)
+  {
+    if (paddle_ring_active)
+    {
+      next_keyer_state = KeyerState::DAH;
+    }
+    else if (paddle_tip_active)
+    {
+      next_keyer_state = KeyerState::DIT;
+    }
+  }
   if (next_keyer_state == KeyerState::DIT)
   {
     curr_keyer_state = KeyerState::DIT;
@@ -578,28 +572,29 @@ void setWPM()
 	dit_length = (1200 / keyer_speed);
 }
 
-void sleep()
-{
-  noInterrupts();
-  GIMSK |= (1 << PCIE);                    // Turn on pin change interrupts
-  // PCMSK |= (1 << PCINT0);                  // Pin change interrupt for PB0
-  // PCMSK |= (1 << PCINT1);                  // Pin change interrupt for PB1
-  PCMSK |= bit(PCINT0) | bit(PCINT1);
-  digitalWrite(SIDETONE_OUTPUT, HIGH);
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN);     // Set sleep mode
-  power_all_disable();                     // Turn off all peripherals
-  sleep_enable();                          // enables the sleep bit in the mcucr register so sleep is possible
-  ADCSRA &= (~(1 << ADEN));                // Disable ADC
-  interrupts();
-  sleep_mode();                            // Put controller to sleep
+// void sleep()
+// {
+//   noInterrupts();
+//   GIMSK |= (1 << PCIE);                    // Turn on pin change interrupts
+//   // PCMSK |= (1 << PCINT0);                  // Pin change interrupt for PB0
+//   // PCMSK |= (1 << PCINT1);                  // Pin change interrupt for PB1
+//   PCMSK |= bit(PCINT0) | bit(PCINT1);
+//   // digitalWrite(SIDETONE_OUTPUT, HIGH);
+//   set_sleep_mode(SLEEP_MODE_PWR_DOWN);     // Set sleep mode
+//   power_all_disable();                     // Turn off all peripherals
+//   sleep_enable();                          // enables the sleep bit in the mcucr register so sleep is possible
+//   ADCSRA &= (~(1 << ADEN));                // Disable ADC
+//   interrupts();
+//   sleep_mode();                            // Put controller to sleep
   
-  sleep_disable();                         // first thing after waking from sleep: disable sleep...
-  power_all_enable();
-  ADCSRA |= (1 << ADEN);;                  // Enable ADC
-  GIMSK &= (~(1 << PCIE));                 // Turn off pin change interrupts
-  digitalWrite(SIDETONE_OUTPUT, LOW);
-  reset_sleep_timer();
-}
+//   sleep_disable();                         // first thing after waking from sleep: disable sleep...
+//   wdt_disable();
+//   power_all_enable();
+//   ADCSRA |= (1 << ADEN);;                  // Enable ADC
+//   GIMSK &= (~(1 << PCIE));                 // Turn off pin change interrupts
+//   // digitalWrite(SIDETONE_OUTPUT, LOW);
+//   reset_sleep_timer();
+// }
 
 void reset_watchdog()
 {
@@ -620,8 +615,7 @@ void wdt_on()
   noInterrupts();
   
   WDTCR |= (_BV(WDCE) | _BV(WDE));   // Enable the WD Change Bit
-  WDTCR =   _BV(WDIE) |              // Enable WDT Interrupt
-           _BV(WDP1);   // Set Timeout to ~1 seconds
+  WDTCR = _BV(WDIE) | _BV(WDP1) | _BV(WDP0);             // Enable WDT Interrupt and set timeout to 
   interrupts();
 }
 
@@ -641,8 +635,9 @@ void setup()
   {
     wdt_off();
   }
-  // wdt_on();
 
+  // Set up sleep mode
+  sleep_enable(); 
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);     // Set sleep mode
 
   // Set up pins
@@ -661,6 +656,7 @@ void setup()
 
   // Reset the sleep timer
   sleep_timeout = millis() + (uint32_t)(SLEEP_TIME * 1000UL);
+
 }
 
 void loop()
@@ -671,23 +667,33 @@ void loop()
 
   if (millis() > sleep_timeout)
   {
-    // digitalWrite(SIDETONE_OUTPUT, HIGH);
     noInterrupts();
-    // power_all_disable();                     // Turn off all peripherals
-    sleep_enable();                          // enables the sleep bit in the mcucr register so sleep is possible
-    // ADCSRA &= (~(1 << ADEN));                // Disable ADC
+    power_all_disable();                     // Turn off all peripherals
     // ADCSRA = 0;
     GIMSK |= (1 << PCIE);                    // Turn on pin change interrupts
     PCMSK |= bit(PCINT0) | bit(PCINT1);
+    ADCSRA &= (~(1 << ADEN));                // Disable ADC
     interrupts();
+    // pinMode(SIDETONE_OUTPUT, INPUT_PULLUP);
+    // pinMode(KEY_OUTPUT, INPUT_PULLUP);
     wdt_on();
     sleep_mode();                            // Put controller to sleep
-    sleep_disable();                         // first thing after waking from sleep: disable sleep...
+
+    // sleep_disable();                         // first thing after waking from sleep: disable sleep...
     GIMSK &= (~(1 << PCIE));                 // Turn off pin change interrupts
+    ADCSRA |= bit(ADEN);
     wdt_off();
+    // pinMode(KEY_OUTPUT, OUTPUT);
+    // pinMode(SIDETONE_OUTPUT, OUTPUT);
     power_all_enable();
-    // sleep_timeout = 0;  // Put back to sleep immediately in loop
-    // digitalWrite(SIDETONE_OUTPUT, LOW);
-    // reset_sleep_timer();
+    button_adc = analogRead(BUTTON_INPUT);
+    if (button_adc < 1020)
+    {
+      reset_sleep_timer();
+    }
+    else
+    {
+      sleep_timeout = 0;  // Put back to sleep immediately in loop
+    }
   }
 }
