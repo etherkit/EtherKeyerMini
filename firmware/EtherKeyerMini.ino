@@ -3,7 +3,7 @@
 // Jason Milldrum, NT7S
 // Etherkit LLC
 //
-// Last Revision: 13 January 2024
+// Last Revision: 28 January 2024
 //
 // A basic memory Morse Code keyer for use with paddles.
 // Keyer speed is adjustable via potentiometer. Three message memories with dedicated playback
@@ -42,7 +42,7 @@
 #include <avr/power.h>
 #include <avr/wdt.h>
 
-#define FIRMWARE_VERSION "13 Jan 2024"
+#define FIRMWARE_VERSION "28 Jan 2024"
 
 // Pin defines
 #define BUTTON_INPUT A0
@@ -113,7 +113,7 @@ Morse morse(KEY_OUTPUT, keyer_speed);
 
 ISR (PCINT0_vect)        // Interrupt service routine 
 {
-  wdt_off();
+  // wdt_off();
   // digitalWrite(SIDETONE_OUTPUT, led ? HIGH : LOW);
   // led = !led;
 }
@@ -249,16 +249,19 @@ bool process_keyer_sm(void *)
         // Toggle the pin modes for paddle input
         pinMode(PADDLE_RING, INPUT_PULLUP);
         pinMode(PADDLE_TIP, INPUT_PULLUP);
+        GIMSK |= bit(PCIE);                    // Turn off pin change interrupts
         last_button = Button::HOLD;
       }
       else
       {
         // digitalWrite(SIDETONE_OUTPUT, LOW);
+        GIMSK &= ~(bit(PCIE));                    // Turn off pin change interrupts
+        // PCMSK |= bit(PCINT0) | bit(PCINT1);      // Interrupt on pins PB0 and PB1
         curr_keyer_state = KeyerState::UART;
         // Toggle the pin modes for UART service
         pinMode(PADDLE_RING, OUTPUT);
         pinMode(PADDLE_TIP, INPUT);
-        Serial.begin(57600);
+        Serial.begin(19200);
         Serial.println();
         Serial.println(F("EtherKeyer Mini"));
         Serial.print(F("Firmware "));
@@ -310,7 +313,7 @@ bool process_keyer_sm(void *)
   //   // Buttons S1 and S1 pressed
   //  if (last_button == Button::NONE)
   //   {
-  //     button_press_time = millis();
+//     button_press_time = millis();
   //     last_button = Button::S1S2;
   //   }
   //   else if ((millis() > button_press_time + BUTTON_PRESS_LONG) && (last_button != Button::HOLD))  // Long press
@@ -461,19 +464,19 @@ bool process_keyer_sm(void *)
           switch (toupper(buf[0]))
           {
             case '1':
-              EEPROM.get(EEP_M1_ADDR, out);
-              Serial.println(out);
+              // EEPROM.get(EEP_M1_ADDR, out);
+              // Serial.println(out);
               break;
             case '2':
-              EEPROM.get(EEP_M2_ADDR, out);
-              Serial.println(out);
+              // EEPROM.get(EEP_M2_ADDR, out);
+              // Serial.println(out);
               break;
             case '3':
-              EEPROM.get(EEP_M3_ADDR, out);
-              Serial.println(out);
+              // EEPROM.get(EEP_M3_ADDR, out);
+              // Serial.println(out);
               break;
             case 'W':  // Get WPM
-              // Serial.println(keyer_speed);
+              Serial.println(keyer_speed);
               break;
           }
         }
@@ -496,9 +499,11 @@ bool process_keyer_sm(void *)
               // Serial.println(buf);
               break;
             case '3':
+              noInterrupts();
               memmove(buf, buf + 2, 40);
               strupr(buf);
               EEPROM.put(EEP_M3_ADDR, buf);
+              interrupts();
               // Serial.print("Wrote 3:");
               // Serial.println(buf);
               break;
@@ -611,7 +616,7 @@ void reset_watchdog()
 void reset_sleep_timer()
 {
   // Reset the sleep timer
-    sleep_timeout = millis() + SLEEP_TIME;
+  sleep_timeout = millis() + SLEEP_TIME;
 }
 
 
@@ -636,6 +641,9 @@ void wdt_off()
 void setup()
 {
   noInterrupts();
+  // Set system clock to 4 MHz
+  CLKPR = (1<<CLKPCE); // Prescaler enable
+  CLKPR = (1<<CLKPS0); // Clock division factor 2 (0001), 4 MHz clock
 
   if(MCUSR & _BV(WDRF))  // If a reset was caused by WDT, then disable it so not stuck in loop
   {
