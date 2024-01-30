@@ -28,7 +28,7 @@ Resistors & Trimmers (0.25 W, 1% tolerance, tolerance band omitted below)
 
 Transistors
 | VP2106N3 (P-MOS), TO-92           1      Q1
-| 2N7000 (N-MOS), TO-92            2      Q2, Q3
+| 2N7000 (N-MOS), TO-92             2      Q2, Q3
 
 ICs
 | ATtiny85V-10PU                    1      U1        
