@@ -17,9 +17,9 @@ A simple keyer that does the basic functions that you need.
 
 
 ### UART Mode
-The format for interacting with EtherKeyer via the UART is very simple. In order to place EtherKeyer
-into UART mode, press and hold button 3 for at least one second. If your serial terminal
-is open when you do this, you'll get a greeting from EtherKeyer to let you know it is ready for commands.
+The format for interacting with EtherKeyer Mini via the UART is very simple. In order to place EtherKeyer into UART mode, press and hold button 3 for at least one second. If your serial terminal is open when you do this, you'll get a greeting from EtherKeyer Mini to let you know it is ready for commands.
+
+Each message memory has a maximum size of 40 characters.
 
 #### Serial Terminal Parameters
 19200 baud, send New Line only

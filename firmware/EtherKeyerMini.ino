@@ -106,11 +106,11 @@ bool paddle_ring_active = false;
 bool paddle_tip_active = false;
 bool key_down = false;
 uint32_t dit_length;
-uint32_t button_press_time;
+// uint32_t button_press_time;
 uint32_t sleep_timeout;
 KeyerState curr_keyer_state = KeyerState::IDLE;
 KeyerState next_keyer_state = KeyerState::IDLE;
-Button last_button = Button::NONE;
+// Button last_button = Button::NONE;
 uint8_t paddle_reverse = 0;
 // volatile bool led = true;
 
@@ -136,6 +136,8 @@ bool process_keyer_sm(void *)
 {
   uint16_t speed_pot_adc;
   uint16_t button_adc;
+  static uint32_t button_press_time;
+  static Button last_button = Button::NONE;
 
   if(curr_keyer_state == KeyerState::PLAYBACK)
   {
@@ -178,7 +180,8 @@ bool process_keyer_sm(void *)
 
   // Process speed pot
   keyer_speed = (speed_pot_adc * (KEYER_SPEED_UPPER - KEYER_SPEED_LOWER) / 1023) + KEYER_SPEED_LOWER;
-  setWPM();
+  // setWPM();
+  dit_length = (1200 / keyer_speed);
   morse.setWPM(keyer_speed);
 
   // Process buttons
@@ -574,7 +577,7 @@ bool ditdah_expire(void *)
   return false;
 }
 
-bool charspace_expire(void *)
+static bool charspace_expire(void *)
 {
   if (next_keyer_state == KeyerState::IDLE)
   {
@@ -631,7 +634,7 @@ bool charspace_expire(void *)
 void setWPM()
 {
   // Dit length in milliseconds is 1200 ms / WPM
-	dit_length = (1200 / keyer_speed);
+	// dit_length = (1200 / keyer_speed);
 }
 
 // void sleep()
@@ -697,6 +700,7 @@ void print_message(uint8_t addr)
   EEPROM.get(addr, out);
   Serial.println(out);
 }
+
 void send_message(uint8_t addr)
 {
   char out[41];
