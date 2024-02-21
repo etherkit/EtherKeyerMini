@@ -8,6 +8,7 @@ A simple keyer that does the basic functions that you need.
 
 ### Pushbuttons
 #### Short Press
+Cancel any message playback by pressing any button or paddle.
 - 1 - Play Message Memory 1
 - 2 - Play Message Memory 2
 - 3 - Play Message Memory 3

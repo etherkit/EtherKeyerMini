@@ -3,6 +3,8 @@
 // Jason Milldrum, NT7S
 // Etherkit LLC
 //
+// This work is licensed under CC BY-SA 4.0
+//
 // Last Revision: 30 January 2024
 //
 // A basic memory Morse Code keyer for use with paddles.
