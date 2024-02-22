@@ -14,6 +14,7 @@ Cancel any message playback by pressing any button or paddle.
 - 3 - Play Message Memory 3
 
 #### Long Press
+- 1 - Tune Mode (press any key to exit)
 - 3 - Enter/Exit UART Mode
 
 
