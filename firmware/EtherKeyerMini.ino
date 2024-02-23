@@ -5,7 +5,7 @@
 //
 // This work is licensed under CC BY-SA 4.0
 //
-// Last Revision: 21 February 2024
+// Last Revision: 22 February 2024
 //
 // A basic memory Morse Code keyer for use with paddles.
 // Keyer speed is adjustable via potentiometer. Three message memories with dedicated playback
@@ -39,6 +39,8 @@
 // X:              Exit UART Mode
 // R:              Reverse Paddle Terminals
 // N:              Normal Paddle Terminals
+// A:              Set Iambic A Mode
+// B:              Set Iambic B Mode
 //
 // Notes
 // =====
@@ -52,7 +54,7 @@
 #include <avr/power.h>
 #include <avr/wdt.h>
 
-#define FIRMWARE_VERSION "21 Feb 2024"
+#define FIRMWARE_VERSION "22 Feb 2024"
 
 // Pin defines
 #define BUTTON_INPUT A0
@@ -67,7 +69,7 @@
 #define DEFAULT_KEYER_SPEED 20
 
 // Limits
-#define KEYER_SPEED_LOWER 5
+#define KEYER_SPEED_LOWER 2
 #define KEYER_SPEED_UPPER 40
 #define BUTTON_ADC_MARGIN 20
 #define BUTTON_PRESS_SHORT 10
@@ -84,6 +86,7 @@
 #define EEP_SIDETONE_FREQ 124  // Sidetone frequency, 2 bytes (uint16_t)
 #define EEP_SPEED_LOWER 126  // Keyer speed lower limit, 1 byte (uint8_t)
 #define EEP_SPEED_UPPER 127  // Keyer speed upper limit, 1 byte (uint8_t)
+#define EEP_KEYER_MODE 128  // Keyer mode, 1 byte (uint8_t)
 
 // Other constants
 #define BUTTON_1_ADC 550
@@ -96,8 +99,9 @@
 // #define BUTTONS_ALL 440
 
 // Enumerations
-enum class KeyerState {IDLE, DIT, DAH, CHARSPACE, PLAYBACK, ANNUNCIATE, UART, TUNE};
+enum class KeyerState {IDLE, DIT, DAH, DITIDLE, DAHIDLE, CHARSPACE, PLAYBACK, ANNUNCIATE, UART, TUNE};
 enum class Button {NONE, S1, S2, S3, S1S2, S2S3, S1S3, HOLD};
+enum class Iambic {A, B};
 
 // Global variables
 // uint16_t speed_pot_adc;
@@ -110,11 +114,13 @@ bool key_down = false;
 uint16_t dit_length;
 // uint32_t button_press_time;
 uint32_t sleep_timeout;
+KeyerState prev_keyer_state = KeyerState::IDLE;
 KeyerState curr_keyer_state = KeyerState::IDLE;
 KeyerState next_keyer_state = KeyerState::IDLE;
 // Button last_button = Button::NONE;
 uint8_t paddle_reverse = 0;
 // volatile bool led = true;
+Iambic keyer_mode = Iambic::A;
 
 
 // Object constructors
@@ -154,9 +160,7 @@ bool process_keyer_sm(void *)
     {
       morse.reset();
       digitalWrite(KEY_OUTPUT, LOW);
-      // PORTB &= ~(1 << PB3);
       curr_keyer_state = KeyerState::IDLE;
-      paddle_ring_active = false;
     }
     else
     {
@@ -175,9 +179,7 @@ bool process_keyer_sm(void *)
     {
       morse.reset();
       digitalWrite(KEY_OUTPUT, LOW);
-      // PORTB &= ~(1 << PB3);
       curr_keyer_state = KeyerState::IDLE;
-      paddle_tip_active = false;
     }
     else
     {
@@ -217,7 +219,6 @@ bool process_keyer_sm(void *)
       reset_sleep_timer();
       curr_keyer_state = KeyerState::TUNE;
       digitalWrite(KEY_OUTPUT, HIGH);
-      // PORTB |= (1 << PB3);
       last_button = Button::HOLD;
     }
   }
@@ -236,11 +237,11 @@ bool process_keyer_sm(void *)
     }
     else if ((millis() > button_press_time + BUTTON_PRESS_LONG) && (last_button != Button::HOLD))  // Long press
     {
-      reset_sleep_timer();
-      curr_keyer_state = KeyerState::ANNUNCIATE;
-      tone(SIDETONE_OUTPUT, 600);
-      morse.send("HI");
-      last_button = Button::HOLD;
+      // reset_sleep_timer();
+      // curr_keyer_state = KeyerState::ANNUNCIATE;
+      // tone(SIDETONE_OUTPUT, 600);
+      // morse.send("HI");
+      // last_button = Button::HOLD;
     }
   }
   else if(button_adc > BUTTON_3_ADC - BUTTON_ADC_MARGIN && button_adc < BUTTON_3_ADC + BUTTON_ADC_MARGIN)
@@ -356,7 +357,6 @@ bool process_keyer_sm(void *)
           {
             morse.reset();
             digitalWrite(KEY_OUTPUT, LOW);
-            // PORTB &= ~(1 << PB3);
             curr_keyer_state = KeyerState::IDLE;
           }
           else
@@ -372,7 +372,6 @@ bool process_keyer_sm(void *)
           {
             morse.reset();
             digitalWrite(KEY_OUTPUT, LOW);
-            // PORTB &= ~(1 << PB3);
             curr_keyer_state = KeyerState::IDLE;
           }
           else
@@ -388,7 +387,6 @@ bool process_keyer_sm(void *)
           {
             morse.reset();
             digitalWrite(KEY_OUTPUT, LOW);
-            // PORTB &= ~(1 << PB3);
             curr_keyer_state = KeyerState::IDLE;
           }
           else
@@ -418,16 +416,18 @@ bool process_keyer_sm(void *)
         if (paddle_reverse)
         {
           curr_keyer_state = KeyerState::DAH;
+          // prev_keyer_state = KeyerState::DAH;
           state_expire_timer.in(dit_length * 3, ditdah_expire);
         }
         else
         {
           curr_keyer_state = KeyerState::DIT;
+          // prev_keyer_state = KeyerState::DIT;
           state_expire_timer.in(dit_length, ditdah_expire);
         }
+        prev_keyer_state = KeyerState::IDLE;
         next_keyer_state = KeyerState::IDLE;
         digitalWrite(KEY_OUTPUT, HIGH);
-        // PORTB |= (1 << PB3);
         // state_expire_timer.in(dit_length, ditdah_expire);
       }
       else if (paddle_ring_active)
@@ -435,78 +435,115 @@ bool process_keyer_sm(void *)
         if (paddle_reverse)
         {
           curr_keyer_state = KeyerState::DIT;
+          // prev_keyer_state = KeyerState::DIT;
           state_expire_timer.in(dit_length, ditdah_expire);
         }
         else
         {
           curr_keyer_state = KeyerState::DAH;
+          // prev_keyer_state = KeyerState::DAH;
           state_expire_timer.in(dit_length * 3, ditdah_expire);
         }
+        prev_keyer_state = KeyerState::IDLE;
         next_keyer_state = KeyerState::IDLE;
         digitalWrite(KEY_OUTPUT, HIGH);
-        // PORTB |= (1 << PB3);
         // state_expire_timer.in(dit_length * 3, ditdah_expire);
       }
       break;
     case KeyerState::DIT:  // Where the squeeze keying happens
-      if (paddle_reverse)
-      {
-        if (paddle_tip_active)
+      // if (paddle_reverse)
+      // {
+      //   if (paddle_tip_active)
+      //   {
+      //     next_keyer_state = KeyerState::DAH;
+      //     prev_keyer_state = KeyerState::DIT;
+      //   }
+      // }
+      // else
+      // {
+        if (keyer_mode == Iambic::A)
         {
-          next_keyer_state = KeyerState::DAH;
+          if (paddle_ring_active && paddle_tip_active)
+          {
+            prev_keyer_state = KeyerState::DIT;
+            next_keyer_state = KeyerState::DAH;
+          }
+          else if (!paddle_ring_active && !paddle_tip_active)
+          {
+            next_keyer_state = KeyerState::IDLE;
+          }
         }
-      }
-      else
-      {
-        if (paddle_ring_active)
+        else if (keyer_mode == Iambic::B)
         {
-          next_keyer_state = KeyerState::DAH;
+          if (paddle_reverse ? paddle_tip_active : paddle_ring_active)
+          {
+            prev_keyer_state = KeyerState::DIT;
+            next_keyer_state = KeyerState::DAH;
+          }
+          else if (!paddle_ring_active && !paddle_tip_active && next_keyer_state == KeyerState::DAH)
+          {
+            prev_keyer_state = KeyerState::IDLE;
+            next_keyer_state = KeyerState::DAH;
+          }
         }
-      }
+        
+      // }
       break;
     case KeyerState::DAH:  // Where the squeeze keying happens
-      if (paddle_reverse)
-      {
-        if (paddle_ring_active)
+      // if (paddle_reverse)
+      // {
+      //   if (paddle_ring_active)
+      //   {
+      //     next_keyer_state = KeyerState::DIT;
+      //     prev_keyer_state = KeyerState::DAH;
+      //   }
+      // }
+      // else
+      // {
+        if (keyer_mode == Iambic::A)
         {
-          next_keyer_state = KeyerState::DIT;
+          if (paddle_tip_active && paddle_ring_active)
+          {
+
+            prev_keyer_state = KeyerState::DAH;
+            next_keyer_state = KeyerState::DIT;
+          }
+          else if (!paddle_ring_active && !paddle_tip_active)
+          {
+            next_keyer_state = KeyerState::IDLE;
+          }
         }
-      }
-      else
-      {
-        if (paddle_tip_active)
+        else if (keyer_mode == Iambic::B)
         {
-          next_keyer_state = KeyerState::DIT;
+          if (paddle_reverse ? paddle_ring_active : paddle_tip_active)
+          {
+            prev_keyer_state = KeyerState::DAH;
+            next_keyer_state = KeyerState::DIT;
+          }
+          else if (!paddle_ring_active && !paddle_tip_active && next_keyer_state == KeyerState::DIT)
+          {
+            prev_keyer_state = KeyerState::IDLE;
+            next_keyer_state = KeyerState::DIT;
+          }
         }
-      }
+      // }
       break;
     case KeyerState::CHARSPACE:
-      if (next_keyer_state == KeyerState::IDLE)
+      reset_sleep_timer();
+      if (prev_keyer_state == KeyerState::DAH)
       {
-        if (paddle_ring_active)
+        if (paddle_reverse ? paddle_ring_active : paddle_tip_active)
         {
-          if (paddle_reverse)
-          {
-            next_keyer_state = KeyerState::DIT;
-          }
-          else
-          {
-            next_keyer_state = KeyerState::DAH;
-          }
-        }
-        else if (paddle_tip_active)
-        {
-          if (paddle_reverse)
-          {
-            next_keyer_state = KeyerState::DAH;
-          }
-          else
-          {
-            next_keyer_state = KeyerState::DIT;
-          }
+          next_keyer_state = KeyerState::DIT;
         }
       }
-      reset_sleep_timer();
+      else if (prev_keyer_state == KeyerState::DIT)
+      {
+        if (paddle_reverse ? paddle_tip_active : paddle_ring_active)
+        {
+          next_keyer_state = KeyerState::DAH;
+        }
+      }
       break;
     case KeyerState::PLAYBACK:
       reset_sleep_timer();
@@ -536,6 +573,7 @@ bool process_keyer_sm(void *)
 
       break;
     case KeyerState::UART:
+      // TODO: UART idle timer to go back to sleep
       reset_sleep_timer();
       if (Serial.available())
       {
@@ -551,7 +589,9 @@ bool process_keyer_sm(void *)
             case '1':
             case '2':
             case '3':
-              print_message((buf[0] - 49) * EEP_M2_ADDR);
+              // print_message((buf[0] - 49) * EEP_M2_ADDR);
+              EEPROM.get((buf[0] - 49) * EEP_M2_ADDR, out);
+              Serial.println(out);
               break;
             case 'W':  // Get WPM
               Serial.println(keyer_speed);
@@ -580,6 +620,15 @@ bool process_keyer_sm(void *)
               paddle_reverse = 0;
               EEPROM.put(EEP_PADDLE_REV, 0);
               break;
+            case 'A':
+              // TODO: These use a lot of code for some reason
+              keyer_mode = Iambic::A;
+              EEPROM.put(EEP_KEYER_MODE, keyer_mode);
+              break;
+            case 'B':
+              keyer_mode = Iambic::B;
+              EEPROM.put(EEP_KEYER_MODE, keyer_mode);
+              break;
             case '1':
             case '2':
             case '3':
@@ -604,7 +653,6 @@ bool process_keyer_sm(void *)
 bool ditdah_expire(void *)
 {
   digitalWrite(KEY_OUTPUT, LOW);
-  // PORTB &= ~(1 << PB3);
   curr_keyer_state = KeyerState::CHARSPACE;
   state_expire_timer.in(dit_length, charspace_expire);
   return false;
@@ -612,53 +660,71 @@ bool ditdah_expire(void *)
 
 static bool charspace_expire(void *)
 {
-  if (next_keyer_state == KeyerState::IDLE)
-  {
-    if (paddle_ring_active)
-    {
-      if (paddle_reverse)
-      {
-        curr_keyer_state = KeyerState::DIT;
-      }
-      else
-      {
-        curr_keyer_state = KeyerState::DAH;
-        // next_keyer_state = KeyerState::DAH;
-      }
-      // next_keyer_state = KeyerState::DAH;
-    }
-    else if (paddle_tip_active)
-    {
-      if (paddle_reverse)
-      {
-        curr_keyer_state = KeyerState::DAH;
-      }
-      else
-      {
-        curr_keyer_state = KeyerState::DIT;
-        // next_keyer_state = KeyerState::DAH;
-      }
-      // next_keyer_state = KeyerState::DIT;
-    }
-  }
+  // if (next_keyer_state == KeyerState::IDLE)
+  // {
+  //   if (paddle_ring_active)
+  //   {
+  //     if (paddle_reverse)
+  //     {
+  //       curr_keyer_state = KeyerState::DIT;
+  //     }
+  //     else
+  //     {
+  //       curr_keyer_state = KeyerState::DAH;
+  //       // next_keyer_state = KeyerState::DAH;
+  //     }
+  //     // next_keyer_state = KeyerState::DAH;
+  //   }
+  //   else if (paddle_tip_active)
+  //   {
+  //     if (paddle_reverse)
+  //     {
+  //       curr_keyer_state = KeyerState::DAH;
+  //     }
+  //     else
+  //     {
+  //       curr_keyer_state = KeyerState::DIT;
+  //       // next_keyer_state = KeyerState::DAH;
+  //     }
+  //     // next_keyer_state = KeyerState::DIT;
+  //   }
+  // }
+  // prev_keyer_state = KeyerState::IDLE;
   if (next_keyer_state == KeyerState::DIT)
   {
+    prev_keyer_state = KeyerState::IDLE;
     curr_keyer_state = KeyerState::DIT;
+    next_keyer_state = KeyerState::IDLE;
     digitalWrite(KEY_OUTPUT, HIGH);
     state_expire_timer.in(dit_length, ditdah_expire);
-    next_keyer_state = KeyerState::IDLE;
   }
   else if (next_keyer_state == KeyerState::DAH)
   {
+    prev_keyer_state = KeyerState::IDLE;
     curr_keyer_state = KeyerState::DAH;
+    next_keyer_state = KeyerState::IDLE;
     digitalWrite(KEY_OUTPUT, HIGH);
     state_expire_timer.in(dit_length * 3, ditdah_expire);
+  }
+  else if (next_keyer_state == KeyerState::DITIDLE)
+  {
+    prev_keyer_state = KeyerState::IDLE;
+    curr_keyer_state = KeyerState::DIT;
     next_keyer_state = KeyerState::IDLE;
+    digitalWrite(KEY_OUTPUT, HIGH);
+    state_expire_timer.in(dit_length, ditdah_expire);
+  }
+  else if (next_keyer_state == KeyerState::DAHIDLE)
+  {
+    prev_keyer_state = KeyerState::IDLE;
+    curr_keyer_state = KeyerState::DAH;
+    next_keyer_state = KeyerState::IDLE;
+    digitalWrite(KEY_OUTPUT, HIGH);
+    state_expire_timer.in(dit_length * 3, ditdah_expire);
   }
   else
   {
     digitalWrite(KEY_OUTPUT, LOW);
-    // PORTB &= ~(1 << PB3);
     curr_keyer_state = KeyerState::IDLE;
     next_keyer_state = KeyerState::IDLE;
   }
@@ -770,25 +836,35 @@ void wdt_off()
   interrupts();
 }
 
-void print_message(uint8_t addr)
-{
-  char out[41];
-  EEPROM.get(addr, out);
-  Serial.println(out);
-}
-
-// void send_message(uint8_t addr)
+// void print_message(uint8_t addr)
 // {
 //   char out[41];
 //   EEPROM.get(addr, out);
-//   morse.send(out);
+//   Serial.println(out);
 // }
+
+void send_message(uint8_t addr)
+{
+  char out[41];
+  EEPROM.get(addr, out);
+  morse.send(out);
+}
 
 // void set_message(uint8_t addr, char* msg)
 // {
 //   memmove(msg, msg + 2, 40);
 //   strupr(msg);
 //   EEPROM.put(addr, msg);
+// }
+
+// bool playback_morse(void *)
+// {
+//   if(curr_keyer_state == KeyerState::PLAYBACK)
+//   {
+//     morse.update();
+//   }
+
+//   return true;
 // }
 
 void setup()
@@ -814,6 +890,7 @@ void setup()
 
   // Load and check EEPROM params
   EEPROM.get(EEP_PADDLE_REV, paddle_reverse);
+  EEPROM.get(EEP_KEYER_MODE, keyer_mode);
 
   // Set up pins
   pinMode(KEY_OUTPUT, OUTPUT);
@@ -821,14 +898,13 @@ void setup()
   pinMode(PADDLE_RING, INPUT_PULLUP);
   pinMode(PADDLE_TIP, INPUT_PULLUP);
   digitalWrite(KEY_OUTPUT, LOW);
-  // PORTB &= ~(1 << PB3);
-  // digitalWrite(SIDETONE_OUTPUT, LOW);
+  digitalWrite(SIDETONE_OUTPUT, LOW);
 
   // Timer Setup
   morse_timer.every(1000, process_keyer_sm);
 
   // Set initial keyer speed
-  setWPM();
+  // setWPM();
 }
 
 void loop()
