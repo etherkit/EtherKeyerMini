@@ -463,7 +463,7 @@ bool process_keyer_sm(void *)
       // {
         if (keyer_mode == Iambic::A)
         {
-          if (paddle_ring_active && paddle_tip_active)
+          if (paddle_reverse ? paddle_tip_active : paddle_ring_active)
           {
             prev_keyer_state = KeyerState::DIT;
             next_keyer_state = KeyerState::DAH;
@@ -502,7 +502,7 @@ bool process_keyer_sm(void *)
       // {
         if (keyer_mode == Iambic::A)
         {
-          if (paddle_tip_active && paddle_ring_active)
+          if (paddle_reverse ? paddle_ring_active : paddle_tip_active)
           {
 
             prev_keyer_state = KeyerState::DAH;
