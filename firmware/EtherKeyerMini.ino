@@ -5,7 +5,7 @@
 //
 // This work is licensed under CC BY-SA 4.0
 //
-// Last Revision: 22 February 2024
+// Last Revision: 20 March 2024
 //
 // A basic memory Morse Code keyer for use with paddles.
 // Keyer speed is adjustable via potentiometer. Three message memories with dedicated playback
@@ -54,7 +54,9 @@
 #include <avr/power.h>
 #include <avr/wdt.h>
 
-#define FIRMWARE_VERSION "22 Feb 2024"
+// #include <util/atomic.h> // For testing millis rollover
+
+#define FIRMWARE_VERSION "20 Mar 2024"
 
 // Pin defines
 #define BUTTON_INPUT A0
@@ -865,6 +867,14 @@ void send_message(uint8_t addr)
 //   }
 
 //   return true;
+// }
+
+// void setMillis(unsigned long ms)
+// {
+//     extern unsigned long millis_timer_millis;
+//     ATOMIC_BLOCK (ATOMIC_RESTORESTATE) {
+//         millis_timer_millis = ms;
+//     }
 // }
 
 void setup()
