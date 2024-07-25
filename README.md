@@ -8,7 +8,7 @@ A simple keyer that does the basic functions that you need.
 
 In order to program the message memories, change parameters other than the keyer speed, and update the firmware, you'll need a serial terminal that can connect to the 5 V TTL UART on EtherKeyer Mini. A common PC USB UART adapter dongle with Dupont pins for the UART connection are a great choice. **In order to load new firmware onto EtherKeyer Mini, your adapter must have the DTR pin available.**
 
-A CR2032 lithium coin cell is recommended for powering EtherKeyer Mini, although it can be powered by the 5 V pin on the UART header.
+A CR2032 lithium coin cell is required for powering EtherKeyer Mini.
 
 ## Functions
 
