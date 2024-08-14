@@ -28,7 +28,8 @@ Cancel any message playback by pressing any button or paddle.
 
 #### Long Press
 
-- 1 - Tune Mode (press any key to exit0)
+- 1 - Tune Mode (press any key to exit)
+- 2 - Toggle Internal Sidetone
 - 3 - Enter/Exit UART Mode
 
 ### UART Mode
@@ -60,6 +61,8 @@ Exit UART mode by pressing and holding button 3 again for at least one second, o
 - ```N:``` - Normal Paddle Terminals
 - ```A:``` - Set Iambic A Mode
 - ```B:``` - Set Iambic B Mode
+- ```S:``` - Sidetone On
+- ```O:``` - Sidetone Off
 
 ## Firmware Updates
 
@@ -67,6 +70,6 @@ __Please see the Requirements section above for the hardware necessary for the U
 
 EtherKeyer Mini uses an ATtiny85 microcontroller with the [urboot bootloader](https://github.com/stefanrueger/urboot) pre-installed. Loading new firmware onto EtherKeyer Mini requires the use of [avrdude](https://github.com/avrdudes/avrdude) version 7.2 or later.
 
-Connect EtherKeyer Mini to your serial connection of choice via the DTR, TX, RX, and GND pins on the UART header on the back of the PCB. Issue the following command in a terminal session in order to load a new firmware image onto EtherKeyer Mini:
+Connect EtherKeyer Mini to your serial connection of choice via the DTR, TX, RX, and GND pins on the UART header on the back of the PCB. Issue the following command in a terminal session in order to load a new firmware image onto EtherKeyer Mini. Replace the string after ```-P``` with the actual port on your PC.
 
 ```avrdude -curclock -pattiny85 -b57600 -P /dev/ttyUSB0 -v -U flash:w:EtherKeyerMini.ino.hex:i```
