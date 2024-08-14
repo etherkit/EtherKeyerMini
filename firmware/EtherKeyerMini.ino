@@ -17,6 +17,23 @@
 // Etherkit Morse (Library Manager)
 // Arduino Timer (Library Manager)
 //
+// Pushbuttons
+// ===========
+//
+// Short Press
+// -----------
+// Cancel any message playback by pressing any button or paddle.
+//
+// * 1 - Play Message Memory 1
+// * 2 - Play Message Memory 2
+// * 3 - Play Message Memory 3
+//
+// Long Press
+// ----------
+// * 1 - Tune Mode (press any key to exit)
+// * 2 - Toggle Internal Sidetone
+// * 3 - Enter/Exit UART Mode
+//
 // Serial commands
 // ===============
 // Serial terminal parameters: 19200 baud, send New Line only
@@ -212,53 +229,13 @@ bool process_keyer_sm(void *)
 
   // Process buttons
   Button cur_button = process_button();
-  // Button cur_button = Button::NONE;
-  // if (button_adc > BUTTON_1_ADC_LOW && button_adc < BUTTON_1_ADC_HIGH)
-  // {
-  //   cur_button = Button::S1;
-  // }
-  // else if (button_adc > BUTTON_2_ADC_LOW && button_adc < BUTTON_2_ADC_HIGH)
-  // {
-  //   cur_button = Button::S2;
-  // }
-  // else if (button_adc > BUTTON_3_ADC_LOW && button_adc < BUTTON_3_ADC_HIGH)
-  // {
-  //   cur_button = Button::S3;
-  // }
 
   if (cur_button != Button::NONE) // Handle a button press
   {
     if (last_button == Button::NONE) // Short press
     {
-      // delay(BUTTON_PRESS_SHORT);  // Debounce via short delay
-      // button_adc = analogRead(BUTTON_INPUT);
       last_button = cur_button;
       button_press_time = millis();
-      // Button debounce_button = process_button();
-      // if (debounce_button != Button::NONE)
-      // {
-      //   last_button = debounce_button;
-      //   button_press_time = millis();
-      // }
-      // else
-      // {
-      //   // button_press_time = UINT32_MAX;
-      // }
-      // if (button_adc > BUTTON_1_ADC_LOW && button_adc < BUTTON_1_ADC_HIGH)
-      // {
-      //   last_button = Button::S1;
-      //   button_press_time = millis();
-      // }
-      // else if (button_adc > BUTTON_2_ADC_LOW && button_adc < BUTTON_2_ADC_HIGH)
-      // {
-      //   last_button = Button::S2;
-      //   button_press_time = millis();
-      // }
-      // else if (button_adc > BUTTON_3_ADC_LOW && button_adc < BUTTON_3_ADC_HIGH)
-      // {
-      //   last_button = Button::S3;
-      //   button_press_time = millis();
-      // }
     }
     else if (millis() > (button_press_time + BUTTON_PRESS_LONG) && (last_button != Button::HOLD))  // Long press
     {
@@ -310,17 +287,6 @@ bool process_keyer_sm(void *)
           }
           last_button = Button::HOLD;
           break;
-        // case Button::S3:
-        //   if (sidetone_active)
-        //   {
-        //     set_sidetone(false);
-        //   }
-        //   else
-        //   {
-        //     set_sidetone(true);
-        //   }
-        //   last_button = Button::HOLD;
-        //   break;
       }
     }
   }
@@ -348,227 +314,6 @@ bool process_keyer_sm(void *)
       last_button = Button::NONE;
     }
   }
-
-//   if(button_adc > BUTTON_1_ADC - BUTTON_ADC_MARGIN && button_adc < BUTTON_1_ADC + BUTTON_ADC_MARGIN)
-//   {
-//     // Button 1 pressed
-//     if (last_button == Button::NONE)
-//     {
-//       delay(BUTTON_PRESS_SHORT);  // Debounce via short delay
-//       button_adc = analogRead(BUTTON_INPUT);
-//       if(button_adc > BUTTON_1_ADC - BUTTON_ADC_MARGIN && button_adc < BUTTON_1_ADC + BUTTON_ADC_MARGIN)
-//       {
-//         button_press_time = millis();
-//         last_button = Button::S1;
-//       }
-//     }
-//     else if ((millis() > button_press_time + BUTTON_PRESS_LONG) && (last_button != Button::HOLD))  // Long press
-//     {
-//       reset_sleep_timer();
-//       curr_keyer_state = KeyerState::TUNE;
-//       // digitalWrite(KEY_OUTPUT, HIGH);
-//       keyline_on();
-//       last_button = Button::HOLD;
-//     }
-//   }
-//   else if(button_adc > BUTTON_2_ADC - BUTTON_ADC_MARGIN && button_adc < BUTTON_2_ADC + BUTTON_ADC_MARGIN)
-//   {
-//     // Button 2 pressed
-//     if (last_button == Button::NONE)
-//     {
-//       delay(BUTTON_PRESS_SHORT);  // Debounce via short delay
-//       button_adc = analogRead(BUTTON_INPUT);
-//       if(button_adc > BUTTON_2_ADC - BUTTON_ADC_MARGIN && button_adc < BUTTON_2_ADC + BUTTON_ADC_MARGIN)
-//       {
-//         button_press_time = millis();
-//         last_button = Button::S2;
-//       }
-//     }
-//     else if ((millis() > button_press_time + BUTTON_PRESS_LONG) && (last_button != Button::HOLD))  // Long press
-//     {
-//       // reset_sleep_timer();
-//       // curr_keyer_state = KeyerState::ANNUNCIATE;
-//       // tone(SIDETONE_OUTPUT, 600);
-//       // morse.send("HI");
-//       // last_button = Button::HOLD;
-//     }
-//   }
-//   else if(button_adc > BUTTON_3_ADC - BUTTON_ADC_MARGIN && button_adc < BUTTON_3_ADC + BUTTON_ADC_MARGIN)
-//   {
-//     // Button 3 pressed
-//    if (last_button == Button::NONE)
-//     {
-//       delay(BUTTON_PRESS_SHORT);  // Debounce via short delay
-//       button_adc = analogRead(BUTTON_INPUT);
-//       if(button_adc > BUTTON_3_ADC - BUTTON_ADC_MARGIN && button_adc < BUTTON_3_ADC + BUTTON_ADC_MARGIN)
-//       {
-//         button_press_time = millis();
-//         last_button = Button::S3;
-//       }
-//     }
-//     else if ((millis() > button_press_time + BUTTON_PRESS_LONG) && (last_button != Button::HOLD))  // Long press
-//     {
-//       reset_sleep_timer();
-//       if (curr_keyer_state == KeyerState::UART)
-//       {
-//         // digitalWrite(SIDETONE_OUTPUT, HIGH);
-//         curr_keyer_state = KeyerState::IDLE;
-//         Serial.println("Exit UART");
-//         Serial.end();
-//         // Toggle the pin modes for paddle input
-//         pinMode(PADDLE_RING, INPUT_PULLUP);
-//         pinMode(PADDLE_TIP, INPUT_PULLUP);
-//         GIMSK |= bit(PCIE);                    // Turn off pin change interrupts
-//         last_button = Button::HOLD;
-//       }
-//       else
-//       {
-//         // digitalWrite(SIDETONE_OUTPUT, LOW);
-//         GIMSK &= ~(bit(PCIE));                    // Turn off pin change interrupts
-//         // PCMSK |= bit(PCINT0) | bit(PCINT1);      // Interrupt on pins PB0 and PB1
-//         curr_keyer_state = KeyerState::UART;
-//         // Toggle the pin modes for UART service
-//         pinMode(PADDLE_RING, OUTPUT);
-//         pinMode(PADDLE_TIP, INPUT);
-//         Serial.begin(19200);
-//         Serial.println();
-//         Serial.println("EtherKeyer Mini");
-//         Serial.print("Firmware ");
-//         Serial.println(FIRMWARE_VERSION);
-//         last_button = Button::HOLD;
-//       }
-//     }
-//   }
-//   // else if(button_adc > BUTTONS_1_AND_3_ADC - BUTTON_ADC_MARGIN && button_adc < BUTTONS_1_AND_3_ADC + BUTTON_ADC_MARGIN)
-//   // {
-//   //   // Button 3 pressed
-//   //  if (last_button == Button::NONE)
-//   //   {
-//   //     button_press_time = millis();
-//   //     last_button = Button::S1S3;
-//   //   }
-//   //   else if ((millis() > button_press_time + BUTTON_PRESS_LONG) && (last_button != Button::HOLD))  // Long press
-//   //   {
-//   //     reset_sleep_timer();
-//   //     if (curr_keyer_state == KeyerState::UART)
-//   //     {
-//   //       digitalWrite(SIDETONE_OUTPUT, HIGH);
-//   //       curr_keyer_state = KeyerState::IDLE;
-//   //       Serial.println("Ending UART Mode");
-//   //       Serial.end();
-//   //       // Toggle the pin modes for paddle input
-//   //       pinMode(PADDLE_RING, INPUT_PULLUP);
-//   //       pinMode(PADDLE_TIP, INPUT_PULLUP);
-//   //       last_button = Button::HOLD;
-//   //     }
-//   //     else
-//   //     {
-//   //       digitalWrite(SIDETONE_OUTPUT, LOW);
-//   //       curr_keyer_state = KeyerState::UART;
-//   //       // Toggle the pin modes for UART service
-//   //       pinMode(PADDLE_RING, OUTPUT);
-//   //       pinMode(PADDLE_TIP, INPUT);
-//   //       Serial.begin(57600);
-//   //       Serial.println();
-//   //       Serial.println("EtherKeyer Mini");
-//   //       Serial.print("Firmware ");
-//   //       Serial.println(FIRMWARE_VERSION);
-//   //       last_button = Button::HOLD;
-//   //     }
-//   //   }
-//   // }
-//   // else if(button_adc > BUTTONS_1_AND_2_ADC - BUTTON_ADC_MARGIN && button_adc < BUTTONS_1_AND_2_ADC + BUTTON_ADC_MARGIN)
-//   // {
-//   //   // Buttons S1 and S1 pressed
-//   //  if (last_button == Button::NONE)
-//   //   {
-// //     button_press_time = millis();
-//   //     last_button = Button::S1S2;
-//   //   }
-//   //   else if ((millis() > button_press_time + BUTTON_PRESS_LONG) && (last_button != Button::HOLD))  // Long press
-//   //   {
-//   //     reset_sleep_timer();
-//   //     last_button = Button::HOLD;
-//   //   }
-//   // }
-//   else if (button_adc > 1023 - BUTTON_ADC_MARGIN) // No button being pressed
-//   {
-//     if (last_button != Button::NONE)  // Check if this is a release
-//     {
-//       // reset_sleep_timer();
-//       if ((millis() >= (button_press_time + BUTTON_PRESS_SHORT)) && (millis() < (button_press_time + BUTTON_PRESS_LONG))) // Short press
-//       {
-//         // char out[41];
-//         // switch (last_button)
-//         // {
-//         // case Button::S1:
-//         //   if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)  // Cancel playback if button pressed
-//         //   {
-//         //     morse.reset();
-//         //     digitalWrite(KEY_OUTPUT, LOW);
-//         //     curr_keyer_state = KeyerState::IDLE;
-//         //   }
-//         //   else
-//         //   {
-//         //     curr_keyer_state = KeyerState::PLAYBACK;
-//         //     send_message(EEP_M1_ADDR);
-//         //     // EEPROM.get(EEP_M1_ADDR, out);
-//         //     // morse.send(out);
-//         //   }
-//         //   break;
-//         // case Button::S2:
-//         //   if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)  // Cancel playback if button pressed
-//         //   {
-//         //     morse.reset();
-//         //     digitalWrite(KEY_OUTPUT, LOW);
-//         //     curr_keyer_state = KeyerState::IDLE;
-//         //   }
-//         //   else
-//         //   {
-//         //     curr_keyer_state = KeyerState::PLAYBACK;
-//         //     send_message(EEP_M2_ADDR);
-//         //     // EEPROM.get(EEP_M2_ADDR, out);
-//         //     // morse.send(out);
-//         //   }
-//         //   break;
-//         // case Button::S3:
-//         //   if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)  // Cancel playback if button pressed
-//         //   {
-//         //     morse.reset();
-//         //     digitalWrite(KEY_OUTPUT, LOW);
-//         //     curr_keyer_state = KeyerState::IDLE;
-//         //   }
-//         //   else
-//         //   {
-//         //     curr_keyer_state = KeyerState::PLAYBACK;
-//         //     send_message(EEP_M3_ADDR);
-//         //     // EEPROM.get(EEP_M3_ADDR, out);
-//         //     // morse.send(out);
-//         //   }
-//         //   break;
-//         // case Button::S1S2:
-//         //   break;
-//         // }
-
-//         if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)  // Cancel playback if button pressed
-//         {
-//           morse.reset();
-//           // digitalWrite(KEY_OUTPUT, LOW);
-//           keyline_off();
-//           curr_keyer_state = KeyerState::IDLE;
-//         }
-//         else
-//         {
-//           curr_keyer_state = KeyerState::PLAYBACK;
-//           send_message(((uint8_t)last_button - 1) * EEP_M2_ADDR);
-//           // EEPROM.get(EEP_M1_ADDR, out);
-//           // morse.send(out);
-//         }
-//       }
-
-//       last_button = Button::NONE;
-//     }
-//   }
 
   // Process the keyer state machine
   switch (curr_keyer_state)
@@ -747,6 +492,7 @@ bool process_keyer_sm(void *)
       // }
       break;
     case KeyerState::TUNE:
+      reset_sleep_timer();
       break;
     case KeyerState::UART:
       // TODO: UART idle timer to go back to sleep
