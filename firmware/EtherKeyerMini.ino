@@ -5,7 +5,7 @@
 //
 // This work is licensed under CC BY-SA 4.0
 //
-// Last Revision: 14 August 2024
+// Last Revision: 21 August 2024
 //
 // A basic memory Morse Code keyer for use with paddles.
 // Keyer speed is adjustable via potentiometer. Three message memories with dedicated playback
@@ -74,7 +74,7 @@
 #include <avr/power.h>
 #include <avr/wdt.h>
 
-#define FIRMWARE_VERSION "14 Aug 2024"
+#define FIRMWARE_VERSION "21 Aug 2024"
 
 // Pin defines
 #define BUTTON_INPUT A0
@@ -179,45 +179,45 @@ bool process_keyer_sm(void *)
   }
 
   // Update inputs and output states
-  if (digitalRead(PADDLE_RING) == LOW)
-  {
-    reset_sleep_timer();
-    if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)
-    {
-      morse.reset();
-      // digitalWrite(KEY_OUTPUT, LOW);
-      keyline_off();
-      curr_keyer_state = KeyerState::IDLE;
-    }
-    else
-    {
-      paddle_ring_active = true;
-    }
-  }
-  else
-  {
-    paddle_ring_active = false;
-  }
+  // if (digitalRead(PADDLE_RING) == LOW)
+  // {
+  //   reset_sleep_timer();
+  //   if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)
+  //   {
+  //     morse.reset();
+  //     // digitalWrite(KEY_OUTPUT, LOW);
+  //     keyline_off();
+  //     curr_keyer_state = KeyerState::IDLE;
+  //   }
+  //   else
+  //   {
+  //     paddle_ring_active = true;
+  //   }
+  // }
+  // else
+  // {
+  //   paddle_ring_active = false;
+  // }
 
-  if (digitalRead(PADDLE_TIP) == LOW)
-  {
-    reset_sleep_timer();
-    if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)
-    {
-      morse.reset();
-      // digitalWrite(KEY_OUTPUT, LOW);
-      keyline_off();
-      curr_keyer_state = KeyerState::IDLE;
-    }
-    else
-    {
-      paddle_tip_active = true;
-    }
-  }
-  else
-  {
-    paddle_tip_active = false;
-  }
+  // if (digitalRead(PADDLE_TIP) == LOW)
+  // {
+  //   reset_sleep_timer();
+  //   if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)
+  //   {
+  //     morse.reset();
+  //     // digitalWrite(KEY_OUTPUT, LOW);
+  //     keyline_off();
+  //     curr_keyer_state = KeyerState::IDLE;
+  //   }
+  //   else
+  //   {
+  //     paddle_tip_active = true;
+  //   }
+  // }
+  // else
+  // {
+  //   paddle_tip_active = false;
+  // }
 
   // button_adc = analogRead(BUTTON_INPUT);
 
@@ -893,6 +893,48 @@ void loop()
   morse_timer.tick();
   state_expire_timer.tick();
 
+  // Update inputs and output states
+  if (digitalRead(PADDLE_RING) == LOW)
+  {
+    reset_sleep_timer();
+    if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)
+    {
+      morse.reset();
+      // digitalWrite(KEY_OUTPUT, LOW);
+      keyline_off();
+      curr_keyer_state = KeyerState::IDLE;
+    }
+    else
+    {
+      paddle_ring_active = true;
+    }
+  }
+  else
+  {
+    paddle_ring_active = false;
+  }
+
+  if (digitalRead(PADDLE_TIP) == LOW)
+  {
+    reset_sleep_timer();
+    if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)
+    {
+      morse.reset();
+      // digitalWrite(KEY_OUTPUT, LOW);
+      keyline_off();
+      curr_keyer_state = KeyerState::IDLE;
+    }
+    else
+    {
+      paddle_tip_active = true;
+    }
+  }
+  else
+  {
+    paddle_tip_active = false;
+  }
+
+  // Go to sleep if necessary
   if (millis() > sleep_timeout)
   {
     power_all_disable();                     // Turn off all peripherals
