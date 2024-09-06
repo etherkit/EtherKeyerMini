@@ -1,40 +1,35 @@
 EtherKeyer Mini BOM
 Etherkit
-28 January 2024
-For Rev A PCB
+6 September 2024
+For Rev B PCB
 
-| Part (marking)                  | Qty  | Ref                            | P/N
+| Part (marking)                     | Qty  | Ref                            | P/N
 ======================================================================================================
 Capacitors
-| 100n                              3      C1, C2, C3
-| 10n                               2      C4, C5         
-
-Diodes
-| 1N5711                            1      D1       
+| 100 nF                               4      C2, C3, C4, C5
+| 1 μF                                 1      C1         
 
 Connectors
-| 3.5 mm Jack                       1      J1, J2                           Kycon STX-3120-3B
-| 5x1 Right Angle 0.1" Jumper       1      J3                               Amphenol 10129379-905001BLF
-| CR2032 Battery Holder             1      BT1                              Linx BAT-HLD-001
+| 3.5 mm Jack                          1      J1, J2                           Kycon STX-3120-3B
+| 4x1 Right Angle 0.1" Jumper          1      J3                               Amphenol 10129379-905001BLF
+| CR2032 Battery Holder                1      BT1                              Linx BAT-HLD-001
 
 Resistors & Trimmers (0.25 W, 1% tolerance, tolerance band omitted below)
-| 10k (brown-black-black-red)       3      R1, R3, R8      
-| 10k trim pot                      1      R2                               Amphenol N6-L50T0C-103
-| 22k (red-red-black-red)           1      R4
-| 47k (yellow-violet-black-red)     1      R5        
-| 100k (brown-black-black-orange)   2      R6, R9
-| 3.3k (orange-orange-black-brown)  1      R7
-| 1M potentiometer                  1      R10                              Alpha RV09AF-20-20K-B16
+| 1 kΩ (brown-black-black-brown)       1      R7
+| 10 kΩ (brown-black-black-red)        4      R3, R6, R8, R9     
+| 10 kΩ trim pot                       1      R2                               Amphenol N6-L50T0C-103
+| 22 kΩ (red-red-black-red)            1      R4
+| 47 kΩ (yellow-violet-black-red)      1      R5        
+| 1 MΩ potentiometer                   1      R10                              Alpha RV09AF-20-20K-B16
 
 Transistors
-| VP2106N3 (P-MOS), TO-92           1      Q1
-| 2N7000 (N-MOS), TO-92             2      Q2, Q3
+| 2N4401, TO-92                        2      Q2, Q3
 
 ICs
-| ATtiny85V-10PU                    1      U1        
+| ATtiny85V-10PU                       1      U1        
 
 Miscellaneous
 | PCB
-| Tactile Buttons                   3      S1, S2, S3                       C&K PTS645VH832LFS
-| Speaker, PCB Mount                1      SP1                              PUI AT-1224-TWT-12V-2-R
-| DIP-8 socket                      1                                       FCI DILB8P-223TLF
+| Tactile Buttons                      3      S1, S2, S3                       C&K PTS645VH832LFS
+| Speaker, PCB Mount                   1      SP1                              PUI AT-1224-TWT-12V-2-R
+| DIP-8 socket                         1                                       FCI DILB8P-223TLF
