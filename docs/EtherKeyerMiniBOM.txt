@@ -31,5 +31,7 @@ ICs
 Miscellaneous
 | PCB
 | Tactile Buttons                      3      S1, S2, S3                       C&K PTS645VH832LFS
-| Speaker, PCB Mount                   1      SP1                              PUI AT-1224-TWT-12V-2-R
+| Pushbutton Switch, SPDT              1      SW1                              E-Switch LC1258EENP
+| Switch Cap, Black                    1                                       E-Switch 1RBLK
+| Speaker, PCB Mount                   1      SP1                              PUI AT-1220-TT-3V-2-R
 | DIP-8 socket                         1                                       FCI DILB8P-223TLF
