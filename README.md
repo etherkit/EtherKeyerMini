@@ -42,7 +42,7 @@ Exit UART mode by pressing and holding button 3 again for at least one second, o
 
 #### Serial Terminal Parameters
 
-19200 baud, send New Line only
+19200 baud, send New Line only, no flow control.
 
 #### Query
 
