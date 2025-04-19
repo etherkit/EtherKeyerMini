@@ -5,7 +5,7 @@
 //
 // This work is licensed under CC BY-SA 4.0
 //
-// Last Revision: 21 August 2024
+// Last Revision: 18 September 2024
 //
 // A basic memory Morse Code keyer for use with paddles.
 // Keyer speed is adjustable via potentiometer. Three message memories with dedicated playback
@@ -36,7 +36,7 @@
 //
 // Serial commands
 // ===============
-// Serial terminal parameters: 19200 baud, send New Line only
+// Serial terminal parameters: 19200 baud, send New Line only, no flow control.
 // The format for interacting with EtherKeyer via the UART is very simple. In order to place EtherKeyer
 // into UART mode, press and hold button 3 for at least one second. If your serial terminal
 // is open when you do this, you'll get a greeting from EtherKeyer to let you know it is ready for commands.
@@ -74,7 +74,7 @@
 #include <avr/power.h>
 #include <avr/wdt.h>
 
-#define FIRMWARE_VERSION "21 Aug 2024"
+#define FIRMWARE_VERSION "18 Sep 2024"
 
 // Pin defines
 #define BUTTON_INPUT A0
@@ -150,7 +150,7 @@ bool sidetone_active = false;
 
 
 // Object constructors
-Timer<1, micros> morse_timer; // create a timer with 2 tasks and millisecond resolution
+Timer<2, micros> morse_timer; // create a timer with 2 tasks and microsecond resolution
 Timer<2, millis> state_expire_timer; // create a timer with 2 tasks and millisecond resolution
 Morse morse(KEY_OUTPUT, keyer_speed);
 
@@ -177,49 +177,6 @@ bool process_keyer_sm(void *)
   {
     morse.update();
   }
-
-  // Update inputs and output states
-  // if (digitalRead(PADDLE_RING) == LOW)
-  // {
-  //   reset_sleep_timer();
-  //   if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)
-  //   {
-  //     morse.reset();
-  //     // digitalWrite(KEY_OUTPUT, LOW);
-  //     keyline_off();
-  //     curr_keyer_state = KeyerState::IDLE;
-  //   }
-  //   else
-  //   {
-  //     paddle_ring_active = true;
-  //   }
-  // }
-  // else
-  // {
-  //   paddle_ring_active = false;
-  // }
-
-  // if (digitalRead(PADDLE_TIP) == LOW)
-  // {
-  //   reset_sleep_timer();
-  //   if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)
-  //   {
-  //     morse.reset();
-  //     // digitalWrite(KEY_OUTPUT, LOW);
-  //     keyline_off();
-  //     curr_keyer_state = KeyerState::IDLE;
-  //   }
-  //   else
-  //   {
-  //     paddle_tip_active = true;
-  //   }
-  // }
-  // else
-  // {
-  //   paddle_tip_active = false;
-  // }
-
-  // button_adc = analogRead(BUTTON_INPUT);
 
   // Process speed pot
   speed_pot_adc = analogRead(SPEED_INPUT);
@@ -282,7 +239,7 @@ bool process_keyer_sm(void *)
             Serial.begin(19200);
             Serial.println();
             Serial.println("EtherKeyer Mini");
-            Serial.print("Firmware ");
+            // Serial.print("Firmware ");
             Serial.println(FIRMWARE_VERSION);
           }
           last_button = Button::HOLD;
@@ -359,6 +316,10 @@ bool process_keyer_sm(void *)
         // digitalWrite(KEY_OUTPUT, HIGH);
         keyline_on();
         // state_expire_timer.in(dit_length * 3, ditdah_expire);
+      }
+      else
+      {
+        keyline_off();
       }
       break;
     case KeyerState::DIT:  // Where the squeeze keying happens
@@ -499,9 +460,9 @@ bool process_keyer_sm(void *)
       reset_sleep_timer();
       if (Serial.available())
       {
-        char buf[45];
+        char buf[35];
         char out[41];
-        int size = Serial.readBytesUntil('\n', buf, 44);
+        int size = Serial.readBytesUntil('\n', buf, 34);
         buf[size] = '\0'; // Null terminate so it's a string
 
         if (buf[1] == '?')  // Get parameter
@@ -524,14 +485,6 @@ bool process_keyer_sm(void *)
           switch (toupper(buf[0]))
           {
             case 'X':  // Exit UART mode
-              // // digitalWrite(SIDETONE_OUTPUT, HIGH);
-              // curr_keyer_state = KeyerState::IDLE;
-              // Serial.println("Exit UART");
-              // Serial.end();
-              // // Toggle the pin modes for paddle input
-              // pinMode(PADDLE_RING, INPUT_PULLUP);
-              // pinMode(PADDLE_TIP, INPUT_PULLUP);
-              // last_button = Button::HOLD;
               exit_uart();
               break;
             case 'R':
@@ -565,7 +518,7 @@ bool process_keyer_sm(void *)
             case '3':
               uint8_t addr = buf[0] - 49;
               // set_message((buf[0] - 49) * EEP_M2_ADDR, buf);
-              memmove(buf, buf + 2, 40);
+              memmove(buf, buf + 2, 35);
               strupr(buf);
               EEPROM.put(addr * EEP_M2_ADDR, buf);
               break;
@@ -716,30 +669,6 @@ void setWPM()
 	// dit_length = (1200 / keyer_speed);
 }
 
-// void sleep()
-// {
-//   noInterrupts();
-//   GIMSK |= (1 << PCIE);                    // Turn on pin change interrupts
-//   // PCMSK |= (1 << PCINT0);                  // Pin change interrupt for PB0
-//   // PCMSK |= (1 << PCINT1);                  // Pin change interrupt for PB1
-//   PCMSK |= bit(PCINT0) | bit(PCINT1);
-//   // digitalWrite(SIDETONE_OUTPUT, HIGH);
-//   set_sleep_mode(SLEEP_MODE_PWR_DOWN);     // Set sleep mode
-//   power_all_disable();                     // Turn off all peripherals
-//   sleep_enable();                          // enables the sleep bit in the mcucr register so sleep is possible
-//   ADCSRA &= (~(1 << ADEN));                // Disable ADC
-//   interrupts();
-//   sleep_mode();                            // Put controller to sleep
-  
-//   sleep_disable();                         // first thing after waking from sleep: disable sleep...
-//   wdt_disable();
-//   power_all_enable();
-//   ADCSRA |= (1 << ADEN);;                  // Enable ADC
-//   GIMSK &= (~(1 << PCIE));                 // Turn off pin change interrupts
-//   // digitalWrite(SIDETONE_OUTPUT, LOW);
-//   reset_sleep_timer();
-// }
-
 void reset_watchdog()
 {
   // wdt_reset();
@@ -846,6 +775,14 @@ Button process_button()
 
 void setup()
 {
+    // Set up pins
+  digitalWrite(KEY_OUTPUT, LOW);
+  digitalWrite(SIDETONE_OUTPUT, LOW);
+  pinMode(KEY_OUTPUT, OUTPUT);
+  pinMode(SIDETONE_OUTPUT, OUTPUT);
+  pinMode(PADDLE_RING, INPUT_PULLUP);
+  pinMode(PADDLE_TIP, INPUT_PULLUP);
+
   noInterrupts();
   // Set system clock to 4 MHz
   CLKPR = (1<<CLKPCE); // Prescaler enable
@@ -870,19 +807,9 @@ void setup()
   EEPROM.get(EEP_KEYER_MODE, keyer_mode);
   EEPROM.get(EEP_SIDETONE_ON, sidetone_active);
 
-  // Set up pins
-  pinMode(KEY_OUTPUT, OUTPUT);
-  pinMode(SIDETONE_OUTPUT, OUTPUT);
-  pinMode(PADDLE_RING, INPUT_PULLUP);
-  pinMode(PADDLE_TIP, INPUT_PULLUP);
-  digitalWrite(KEY_OUTPUT, LOW);
-  digitalWrite(SIDETONE_OUTPUT, LOW);
-
   // Timer Setup
   morse_timer.every(1000, process_keyer_sm);
-
-  // Set initial keyer speed
-  // setWPM();
+  delay(100);  // Short delay here to stop the keyer from emitting a dit on power up
 }
 
 void loop()
