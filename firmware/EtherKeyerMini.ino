@@ -5,7 +5,8 @@
 //
 // This work is licensed under CC BY-SA 4.0
 //
-// Last Revision: 18 September 2024
+// Last Revision: 11 May 2025
+// For Rev C PCB
 //
 // A basic memory Morse Code keyer for use with paddles.
 // Keyer speed is adjustable via potentiometer. Three message memories with dedicated playback
@@ -74,15 +75,17 @@
 #include <avr/power.h>
 #include <avr/wdt.h>
 
-#define FIRMWARE_VERSION "18 Sep 2024"
+#define FIRMWARE_VERSION "11 May 2025"
 
 // Pin defines
-#define BUTTON_INPUT A0
-#define SPEED_INPUT A1
-#define PADDLE_RING PIN_PB0  // Typical config, ring == DAH
-#define PADDLE_TIP PIN_PB1   // Typical config, tip == DIT
-#define KEY_OUTPUT PIN_PB3
-#define SIDETONE_OUTPUT PIN_PB4
+#define SPEED_INPUT PIN_PB5
+#define PADDLE_RING PIN_PB2  // Typical config, ring == DAH
+#define PADDLE_TIP PIN_PB3   // Typical config, tip == DIT
+#define BUTTON_S1 PIN_PC0
+#define BUTTON_S2 PIN_PC1
+#define BUTTON_S3 PIN_PC2
+#define KEY_OUTPUT PIN_PA6
+#define SIDETONE_OUTPUT PIN_PA7
 
 // Defaults
 #define DEFAULT_SIDETONE_FREQ 600
@@ -91,10 +94,9 @@
 // Limits
 #define KEYER_SPEED_LOWER 5
 #define KEYER_SPEED_UPPER 40
-#define BUTTON_ADC_MARGIN 40
 #define BUTTON_PRESS_SHORT 10
 #define BUTTON_PRESS_LONG 1000
-#define SLEEP_TIME 1000  // In milliseconds
+#define SLEEP_TIME 3000  // In milliseconds, has to be long enough to not go to sleep during a long button press
 
 // EEPROM Addresses
 // Why not just use a struct for all of EEPROM? RAM is too scarce to work with the whole struct at once.
@@ -108,22 +110,6 @@
 #define EEP_SPEED_UPPER 127  // Keyer speed upper limit, 1 byte (uint8_t)
 #define EEP_KEYER_MODE 128  // Keyer mode, 1 byte (uint8_t)
 #define EEP_SIDETONE_ON 129  // Sidetone active, 1 byte (uint8_t)
-
-// Other constants
-#define BUTTON_1_ADC 550
-#define BUTTON_1_ADC_LOW BUTTON_1_ADC - BUTTON_ADC_MARGIN
-#define BUTTON_1_ADC_HIGH BUTTON_1_ADC + BUTTON_ADC_MARGIN
-#define BUTTON_2_ADC 730
-#define BUTTON_2_ADC_LOW BUTTON_2_ADC - BUTTON_ADC_MARGIN
-#define BUTTON_2_ADC_HIGH BUTTON_2_ADC + BUTTON_ADC_MARGIN
-// #define BUTTON_3_ADC 937
-#define BUTTON_3_ADC 840
-#define BUTTON_3_ADC_LOW BUTTON_3_ADC - BUTTON_ADC_MARGIN
-#define BUTTON_3_ADC_HIGH BUTTON_3_ADC + BUTTON_ADC_MARGIN
-// #define BUTTONS_1_AND_2_ADC 456
-// #define BUTTONS_2_AND_3_ADC 689
-// #define BUTTONS_1_AND_3_ADC 527
-// #define BUTTONS_ALL 440
 
 // Enumerations
 enum class KeyerState {IDLE, DIT, DAH, DITIDLE, DAHIDLE, CHARSPACE, PLAYBACK, ANNUNCIATE, UART, TUNE};
@@ -144,32 +130,53 @@ KeyerState curr_keyer_state = KeyerState::IDLE;
 KeyerState next_keyer_state = KeyerState::IDLE;
 // Button last_button = Button::NONE;
 bool paddle_reverse = false;
-// volatile bool led = true;
 Iambic keyer_mode = Iambic::A;
 bool sidetone_active = false;
 
 
 // Object constructors
 Timer<2, micros> morse_timer; // create a timer with 2 tasks and microsecond resolution
+Timer<2, micros> memory_keyer_timer; // create a timer with 2 tasks and microsecond resolution
 Timer<2, millis> state_expire_timer; // create a timer with 2 tasks and millisecond resolution
 Morse morse(KEY_OUTPUT, keyer_speed);
 
-ISR (PCINT0_vect)        // Interrupt service routine 
-{
-  // digitalWrite(SIDETONE_OUTPUT, led ? HIGH : LOW);
-  // led = !led;
+ISR(PORTB_PORT_vect) {
+  uint8_t flags = PORTB.INTFLAGS;
+  PORTB.INTFLAGS = flags; //clear flags
+  // if (flags & 0x02) {
+  //   //
+  // }
+  // if (flags & 0x04) {
+  //   //
+  // }
+  reset_sleep_timer();
 }
 
-ISR (WDT_vect)
-{
-  //
+ISR(PORTC_PORT_vect) {
+  uint8_t flags = PORTC.INTFLAGS;
+  PORTC.INTFLAGS = flags; //clear flags
+  // if (flags & 0x02) {
+  //   //
+  // }
+  // if (flags & 0x04) {
+  //   //
+  // }
+  reset_sleep_timer();
 }
 
 // Timer Callbacks
+// bool process_memory_keyer(void *) {
+//   if(curr_keyer_state == KeyerState::PLAYBACK)
+//   {
+//     morse.update();
+//   }
+
+//   return true;
+// }
+
 bool process_keyer_sm(void *)
 {
   uint16_t speed_pot_adc;
-  // uint16_t button_adc;
   // static uint32_t button_press_time;
   static Button last_button;
 
@@ -210,14 +217,14 @@ bool process_keyer_sm(void *)
             set_sidetone(false);
             tone(SIDETONE_OUTPUT, 400);
             delay(200);
-            noTone();
+            noTone(SIDETONE_OUTPUT);
           }
           else
           {
             set_sidetone(true);
             tone(SIDETONE_OUTPUT, 1000);
             delay(200);
-            noTone();
+            noTone(SIDETONE_OUTPUT);
           }
           last_button = Button::HOLD;
           break;
@@ -229,17 +236,15 @@ bool process_keyer_sm(void *)
           }
           else
           {
-            // digitalWrite(SIDETONE_OUTPUT, LOW);
-            GIMSK &= ~(bit(PCIE));                    // Turn off pin change interrupts
-            // PCMSK |= bit(PCINT0) | bit(PCINT1);      // Interrupt on pins PB0 and PB1
             curr_keyer_state = KeyerState::UART;
             // Toggle the pin modes for UART service
             pinMode(PADDLE_RING, OUTPUT);
             pinMode(PADDLE_TIP, INPUT);
             Serial.begin(19200);
+            delay(100);
             Serial.println();
             Serial.println("EtherKeyer Mini");
-            // Serial.print("Firmware ");
+            Serial.print("Firmware ");
             Serial.println(FIRMWARE_VERSION);
           }
           last_button = Button::HOLD;
@@ -264,6 +269,7 @@ bool process_keyer_sm(void *)
         else
         {
           curr_keyer_state = KeyerState::PLAYBACK;
+          morse.setWPM(keyer_speed);
           send_message(((uint8_t)last_button - 1) * EEP_M2_ADDR);
         }
       }
@@ -421,7 +427,7 @@ bool process_keyer_sm(void *)
       reset_sleep_timer();
       if (morse.busy == false)
       {
-        noTone();
+        noTone(SIDETONE_OUTPUT);
         curr_keyer_state = KeyerState::IDLE;
       }
       if (sidetone_active)
@@ -432,7 +438,7 @@ bool process_keyer_sm(void *)
         }
         else
         {
-          noTone();
+          noTone(SIDETONE_OUTPUT);
         }
       }
       break;
@@ -460,9 +466,9 @@ bool process_keyer_sm(void *)
       reset_sleep_timer();
       if (Serial.available())
       {
-        char buf[35];
+        char buf[41];
         char out[41];
-        int size = Serial.readBytesUntil('\n', buf, 34);
+        int size = Serial.readBytesUntil('\n', buf, 40);
         buf[size] = '\0'; // Null terminate so it's a string
 
         if (buf[1] == '?')  // Get parameter
@@ -518,9 +524,14 @@ bool process_keyer_sm(void *)
             case '3':
               uint8_t addr = buf[0] - 49;
               // set_message((buf[0] - 49) * EEP_M2_ADDR, buf);
-              memmove(buf, buf + 2, 35);
+              memmove(buf, buf + 2, 40);
               strupr(buf);
               EEPROM.put(addr * EEP_M2_ADDR, buf);
+              // Print it back
+              EEPROM.get((addr) * EEP_M2_ADDR, out);
+              Serial.print(addr + 1);
+              Serial.print(":");
+              Serial.println(out);
               break;
           }
         }
@@ -577,6 +588,7 @@ static bool charspace_expire(void *)
   // prev_keyer_state = KeyerState::IDLE;
   if (next_keyer_state == KeyerState::DIT)
   {
+    reset_sleep_timer();
     prev_keyer_state = KeyerState::IDLE;
     curr_keyer_state = KeyerState::DIT;
     next_keyer_state = KeyerState::IDLE;
@@ -586,6 +598,7 @@ static bool charspace_expire(void *)
   }
   else if (next_keyer_state == KeyerState::DAH)
   {
+    reset_sleep_timer();
     prev_keyer_state = KeyerState::IDLE;
     curr_keyer_state = KeyerState::DAH;
     next_keyer_state = KeyerState::IDLE;
@@ -595,6 +608,7 @@ static bool charspace_expire(void *)
   }
   else if (next_keyer_state == KeyerState::DITIDLE)
   {
+    reset_sleep_timer();
     prev_keyer_state = KeyerState::IDLE;
     curr_keyer_state = KeyerState::DIT;
     next_keyer_state = KeyerState::IDLE;
@@ -604,6 +618,7 @@ static bool charspace_expire(void *)
   }
   else if (next_keyer_state == KeyerState::DAHIDLE)
   {
+    reset_sleep_timer();
     prev_keyer_state = KeyerState::IDLE;
     curr_keyer_state = KeyerState::DAH;
     next_keyer_state = KeyerState::IDLE;
@@ -683,25 +698,6 @@ void reset_sleep_timer()
   sleep_timeout = millis() + SLEEP_TIME;
 }
 
-
-void wdt_on()
-{
-  noInterrupts();
-  WDTCR |= bit(WDCE) | bit(WDE);   // Enable the WD Change Bit
-  WDTCR = bit(WDIE) | bit(WDP0);             // Enable WDT Interrupt and set timeout to 32 ms (for responsiveness)
-  interrupts();
-}
-
-void wdt_off()
-{
-  noInterrupts();
-  // MCUSR &= ~bit(WDRF);                 // Clear the WDT reset flag
-  MCUSR = 0; 
-  WDTCR |= (bit(WDCE) | bit(WDE));   // Enable the WD Change Bit
-  WDTCR = 0x00;   
-  interrupts();
-}
-
 void send_message(uint8_t addr)
 {
   char out[41];
@@ -711,7 +707,7 @@ void send_message(uint8_t addr)
 
 void keyline_on()
 {
-  digitalWrite(KEY_OUTPUT, HIGH);
+  digitalWriteFast(KEY_OUTPUT, HIGH);
   if (sidetone_active)
   {
     tone(SIDETONE_OUTPUT, DEFAULT_SIDETONE_FREQ);
@@ -720,10 +716,10 @@ void keyline_on()
 
 void keyline_off()
 {
-  digitalWrite(KEY_OUTPUT, LOW);
+  digitalWriteFast(KEY_OUTPUT, LOW);
   if (sidetone_active)
   {
-    noTone();
+    noTone(SIDETONE_OUTPUT);
   }
 }
 
@@ -754,17 +750,13 @@ void exit_uart()
 
 Button process_button()
 {
-  uint16_t button_adc = analogRead(BUTTON_INPUT);
-  if (button_adc > BUTTON_1_ADC_LOW && button_adc < BUTTON_1_ADC_HIGH)
-  {
+  if (digitalReadFast(BUTTON_S1) == LOW) {
     return Button::S1;
   }
-  else if (button_adc > BUTTON_2_ADC_LOW && button_adc < BUTTON_2_ADC_HIGH)
-  {
+  else if (digitalReadFast(BUTTON_S2) == LOW) {
     return Button::S2;
   }
-  else if (button_adc > BUTTON_3_ADC_LOW && button_adc < BUTTON_3_ADC_HIGH)
-  {
+  else if (digitalReadFast(BUTTON_S3) == LOW) {
     return Button::S3;
   }
   else
@@ -775,53 +767,60 @@ Button process_button()
 
 void setup()
 {
-    // Set up pins
-  digitalWrite(KEY_OUTPUT, LOW);
-  digitalWrite(SIDETONE_OUTPUT, LOW);
+  // Set up pins
+  // For the purposes of saving power, we need to set all unused pins (not actively driven)
+  // to be outputs or input w/ pullup
   pinMode(KEY_OUTPUT, OUTPUT);
   pinMode(SIDETONE_OUTPUT, OUTPUT);
   pinMode(PADDLE_RING, INPUT_PULLUP);
   pinMode(PADDLE_TIP, INPUT_PULLUP);
+  pinMode(BUTTON_S1, INPUT_PULLUP);
+  pinMode(BUTTON_S2, INPUT_PULLUP);
+  pinMode(BUTTON_S3, INPUT_PULLUP);
+  pinMode(SPEED_INPUT, INPUT);
+  pinMode(PIN_PA1, OUTPUT);
+  pinMode(PIN_PA2, OUTPUT);
+  pinMode(PIN_PA3, OUTPUT);
+  pinMode(PIN_PA4, OUTPUT);
+  pinMode(PIN_PA5, OUTPUT);
+  pinMode(PIN_PB0, OUTPUT);
+  pinMode(PIN_PB1, OUTPUT);
+  pinMode(PIN_PC3, OUTPUT);
 
-  noInterrupts();
-  // Set system clock to 4 MHz
-  CLKPR = (1<<CLKPCE); // Prescaler enable
-  CLKPR = (1<<CLKPS0); // Clock division factor 2 (0001), 4 MHz clock
+  digitalWriteFast(KEY_OUTPUT, LOW);
+  digitalWriteFast(SIDETONE_OUTPUT, LOW);
 
-  if(MCUSR & _BV(WDRF))  // If a reset was caused by WDT, then disable it so not stuck in loop
-  {
-    wdt_off();
-  }
+  // Set up pin interrupts
+  PORTB.PIN2CTRL = 0b00001001; // Input pullup, interrupt on change;
+  PORTB.PIN3CTRL = 0b00001001; // Input pullup, interrupt on change;
+  PORTC.PIN0CTRL = 0b00001001; // Input pullup, interrupt on change;
+  PORTC.PIN1CTRL = 0b00001001; // Input pullup, interrupt on change;
+  PORTC.PIN2CTRL = 0b00001001; // Input pullup, interrupt on change;
 
   // Set up sleep mode
   sleep_enable(); 
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);     // Set sleep mode
 
-  GIMSK |= bit(PCIE);                    // Turn on pin change interrupts
-  PCMSK |= bit(PCINT0) | bit(PCINT1);      // Interrupt on pins PB0 and PB1
-
-  interrupts();
-
   // Load and check EEPROM params
-  EEPROM.get(EEP_PADDLE_REV, paddle_reverse);
-  EEPROM.get(EEP_KEYER_MODE, keyer_mode);
-  EEPROM.get(EEP_SIDETONE_ON, sidetone_active);
+  // EEPROM.get(EEP_PADDLE_REV, paddle_reverse);
+  // EEPROM.get(EEP_KEYER_MODE, keyer_mode);
+  // EEPROM.get(EEP_SIDETONE_ON, sidetone_active);
 
   // Timer Setup
   morse_timer.every(1000, process_keyer_sm);
+  // memory_keyer_timer.every(1000, process_memory_keyer);
   delay(100);  // Short delay here to stop the keyer from emitting a dit on power up
 }
 
 void loop()
 {
-  uint16_t button_adc;
-
   // Tick the various timers
   morse_timer.tick();
+  // memory_keyer_timer.tick();
   state_expire_timer.tick();
 
   // Update inputs and output states
-  if (digitalRead(PADDLE_RING) == LOW)
+  if (digitalReadFast(PADDLE_RING) == LOW)
   {
     reset_sleep_timer();
     if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)
@@ -841,7 +840,7 @@ void loop()
     paddle_ring_active = false;
   }
 
-  if (digitalRead(PADDLE_TIP) == LOW)
+  if (digitalReadFast(PADDLE_TIP) == LOW)
   {
     reset_sleep_timer();
     if (curr_keyer_state == KeyerState::PLAYBACK || curr_keyer_state == KeyerState::TUNE)
@@ -864,23 +863,8 @@ void loop()
   // Go to sleep if necessary
   if (millis() > sleep_timeout)
   {
-    power_all_disable();                     // Turn off all peripherals
-    ADCSRA &= (~(1 << ADEN));                // Disable ADC
-    wdt_on();
-    sleep_mode();                            // Put controller to sleep
-
-    wdt_off();
-    power_all_enable();
-    // ADCSRA |= bit(ADEN);
-
-    button_adc = analogRead(BUTTON_INPUT);
-    if (button_adc < 1020)
-    {
-      reset_sleep_timer();
-    }
-    else
-    {
-      sleep_timeout = 0;  // Put back to sleep immediately in loop
-    }
+    ADC0.CTRLA &= ~ADC_ENABLE_bm;
+    sleep_cpu();
+    ADC0.CTRLA |= ADC_ENABLE_bm;
   }
 }
