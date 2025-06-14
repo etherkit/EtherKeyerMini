@@ -1,37 +1,35 @@
 EtherKeyer Mini BOM
 Etherkit
-6 September 2024
-For Rev B PCB
+14 June 2025
+For Rev C PCB
 
 | Part (marking)                     | Qty  | Ref                            | P/N
 ======================================================================================================
 Capacitors
-| 100 nF                               4      C2, C3, C4, C5
-| 1 μF                                 1      C1         
+| 100 nF                               3      C2, C3, C4
+| 4.7 μF                               1      C1         
 
 Connectors
-| 3.5 mm Jack                          1      J1, J2                           Kycon STX-3120-3B
-| 4x1 Right Angle 0.1" Jumper          1      J3                               Amphenol 10129379-905001BLF
+| 3.5 mm TRS Jack                      1      J1                               Kycon STX-3120-3B
+| 3.5 mm TRRS Jack                     1      J2                               Samesky SJ-43514
+| 0.1" pin header, 4x1 pins            1      J3
 | CR2032 Battery Holder                1      BT1                              Linx BAT-HLD-001
 
 Resistors & Trimmers (0.25 W, 1% tolerance, tolerance band omitted below)
-| 1 kΩ (brown-black-black-brown)       1      R7
-| 10 kΩ (brown-black-black-red)        4      R3, R6, R8, R9     
-| 10 kΩ trim pot                       1      R2                               Amphenol N6-L50T0C-103
-| 22 kΩ (red-red-black-red)            1      R4
-| 47 kΩ (yellow-violet-black-red)      1      R5        
-| 1 MΩ potentiometer                   1      R10                              Alpha RV09AF-20-20K-B16
+| 10 kΩ (brown-black-black-red)        3      R1, R2, R4    
+| 470 Ω (yellow-violet-black-black)    1      R3
+| 1 MΩ potentiometer                   1      R5                              Alpha RV09AF-20-20K-B16
 
 Transistors
-| 2N4401, TO-92                        2      Q2, Q3
+| 2N4401, TO-92                        2      Q1, Q2
+
+Diodes
+| 1N5711                               2      D1, D2
 
 ICs
-| ATtiny85V-10PU                       1      U1        
+| ATtiny3226-SU                        1      U1        
 
 Miscellaneous
 | PCB
 | Tactile Buttons                      3      S1, S2, S3                       C&K PTS645VH832LFS
-| Pushbutton Switch, SPDT              1      SW1                              E-Switch LC1258EENP
-| Switch Cap, Black                    1                                       E-Switch 1RBLK
 | Speaker, PCB Mount                   1      SP1                              PUI AT-1220-TT-3V-2-R
-| DIP-8 socket                         1                                       FCI DILB8P-223TLF
