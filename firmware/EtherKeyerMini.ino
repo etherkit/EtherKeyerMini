@@ -31,7 +31,7 @@
 //
 // Long Press
 // ----------
-// * 1 - Tune Mode (press any key to exit)
+// * 1 - Tune Mode (press any key to exit, otherwise exits after 30 seconds)
 // * 2 - Toggle Internal Sidetone
 // * 3 - Enter/Exit UART Mode
 //
@@ -41,6 +41,7 @@
 // The format for interacting with EtherKeyer via the UART is very simple. In order to place EtherKeyer
 // into UART mode, press and hold button 3 for at least one second. If your serial terminal
 // is open when you do this, you'll get a greeting from EtherKeyer to let you know it is ready for commands.
+// UART mode returns to keyer mode after 60 seconds without a received line so the keyer can sleep.
 //
 // Query
 // -----
@@ -97,6 +98,8 @@
 #define BUTTON_PRESS_SHORT 10
 #define BUTTON_PRESS_LONG 1000
 #define SLEEP_TIME 3000  // In milliseconds, has to be long enough to not go to sleep during a long button press
+#define UART_IDLE_TIME 60000  // Leave UART mode after 60 seconds without a received line
+#define TUNE_TIME 30000  // Leave tune mode after 30 seconds so a forgotten key-down cannot hold the rig keyed
 
 // EEPROM Addresses
 // Why not just use a struct for all of EEPROM? RAM is too scarce to work with the whole struct at once.
@@ -131,6 +134,8 @@ bool key_down = false;
 uint16_t dit_length;
 uint32_t button_press_time;
 uint32_t sleep_timeout;
+uint32_t uart_idle_timeout;
+uint32_t tune_timeout;
 KeyerState prev_keyer_state = KeyerState::IDLE;
 KeyerState curr_keyer_state = KeyerState::IDLE;
 KeyerState next_keyer_state = KeyerState::IDLE;
@@ -333,6 +338,7 @@ bool process_keyer_sm(void *)
       {
         case Button::S1:
           reset_sleep_timer();
+          tune_timeout = millis() + TUNE_TIME;
           curr_keyer_state = KeyerState::TUNE;
           keyline_on();
           last_button = Button::HOLD;
@@ -363,6 +369,7 @@ bool process_keyer_sm(void *)
           else
           {
             curr_keyer_state = KeyerState::UART;
+            uart_idle_timeout = millis() + UART_IDLE_TIME;
             // Toggle the pin modes for UART service
             pinMode(PADDLE_RING, OUTPUT);
             pinMode(PADDLE_TIP, INPUT);
@@ -490,17 +497,35 @@ bool process_keyer_sm(void *)
       // }
       break;
     case KeyerState::TUNE:
-      reset_sleep_timer();
+      if (millis() >= tune_timeout)
+      {
+        keyline_off();
+        curr_keyer_state = KeyerState::IDLE;
+      }
+      else
+      {
+        reset_sleep_timer();
+      }
       break;
     case KeyerState::UART:
-      // TODO: UART idle timer to go back to sleep
+      // Stay awake so the USART clock keeps running, but leave UART mode
+      // after a minute without a received line so deep sleep can resume.
       reset_sleep_timer();
+      if (millis() >= uart_idle_timeout)
+      {
+        exit_uart();
+        break;
+      }
       if (Serial.available())
       {
         char buf[41];
         char out[41];
         int size = Serial.readBytesUntil('\n', buf, 40);
         buf[size] = '\0'; // Null terminate so it's a string
+        if (size > 0)
+        {
+          uart_idle_timeout = millis() + UART_IDLE_TIME;
+        }
 
         if (buf[1] == '?')  // Get parameter
         {

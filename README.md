@@ -28,7 +28,7 @@ Cancel any message playback by pressing any button or paddle.
 
 #### Long Press
 
-- 1 - Tune Mode (press any key to exit)
+- 1 - Tune Mode (press any key to exit, otherwise exits after 30 seconds)
 - 2 - Toggle Internal Sidetone
 - 3 - Enter/Exit UART Mode
 
@@ -38,7 +38,7 @@ The format for interacting with EtherKeyer Mini via the UART is very simple. In 
 
 Each message memory has a maximum size of 40 characters.
 
-Exit UART mode by pressing and holding button 3 again for at least one second, or issue the ```X:``` command in the serial terminal.
+Exit UART mode by pressing and holding button 3 again for at least one second, or issue the ```X:``` command in the serial terminal. UART mode also returns to keyer mode after 60 seconds without a received line, so the keyer can go back to sleep.
 
 #### Serial Terminal Parameters
 
