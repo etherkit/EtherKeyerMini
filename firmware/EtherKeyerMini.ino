@@ -141,8 +141,8 @@ bool sidetone_active = false;
 
 
 // Object constructors
-Timer<2, micros> morse_timer; // create a timer with 2 tasks and microsecond resolution
-Timer<2, micros> memory_keyer_timer; // create a timer with 2 tasks and microsecond resolution
+Timer<2, millis> morse_timer; // create a timer with 2 tasks and microsecond resolution
+//Timer<2, micros> memory_keyer_timer; // create a timer with 2 tasks and microsecond resolution
 Timer<2, millis> state_expire_timer; // create a timer with 2 tasks and millisecond resolution
 Morse morse(KEY_OUTPUT, keyer_speed);
 
@@ -778,7 +778,7 @@ void setup()
   }
 
   // Timer Setup
-  morse_timer.every(1000, process_keyer_sm);
+  morse_timer.every(1, process_keyer_sm);
   // memory_keyer_timer.every(1000, process_memory_keyer);
   delay(100);  // Short delay here to stop the keyer from emitting a dit on power up
 }
