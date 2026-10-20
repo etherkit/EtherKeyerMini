@@ -45,6 +45,10 @@ class Keyer:
                     self.dit_memory = True
             elif self.dit_pad:
                 self.dit_memory = True
+        # Mode A drops latched memory when both paddles are up (squeeze release).
+        if self.mode == Mode.A and not self.dit_pad and not self.dah_pad:
+            self.dit_memory = False
+            self.dah_memory = False
         self.dit_rose = False
         self.dah_rose = False
 
@@ -99,13 +103,12 @@ class Keyer:
 
 
 def letter_c_mode_a() -> str:
-    """Squeeze dah-first; release both during final dit → should be -.-. and stop."""
+    """Squeeze dah-first (dit edge during first dah); release both during final dit."""
     k = Keyer(Mode.A)
-    # Lead dah, then squeeze (both). Mode A: continuous hold does not edge-latch.
-    k.run_element(Element.DAH, dit_pad=True, dah_pad=True)  # no rises after start
+    k.run_element(Element.DAH, dit_pad=True, dah_pad=True, dit_rose=True)
     k.run_element(Element.DIT, dit_pad=True, dah_pad=True)
     k.run_element(Element.DAH, dit_pad=True, dah_pad=True)
-    # Final dit; release both during this dit (no edges)
+    # Final dit; release both during this dit
     k.run_element(Element.DIT, dit_pad=False, dah_pad=False)
     k.dit_pad = False
     k.dah_pad = False
@@ -174,6 +177,32 @@ def mode_b_gap_release_bonus_dit() -> str:
     return "".join(k.output)
 
 
+def mode_a_short_squeeze_no_trailer() -> str:
+    """Mode A: dit closes during dah, then both released — no trailing dit."""
+    k = Keyer(Mode.A)
+    k.run_element(Element.DAH, dit_pad=True, dah_pad=True, dit_rose=True)
+    k.dit_pad = False
+    k.dah_pad = False
+    k.arm_during(Element.DAH)
+    assert k.dit_memory is False
+    assert k.decide() == Element.IDLE
+    return "".join(k.output)
+
+
+def mode_b_short_squeeze_trailer() -> str:
+    """Mode B: same short squeeze releases during the dah and still sends the dit."""
+    k = Keyer(Mode.B)
+    k.run_element(Element.DAH, dit_pad=True, dah_pad=True, dit_rose=True)
+    k.dit_pad = False
+    k.dah_pad = False
+    k.arm_during(Element.DAH)
+    assert k.dit_memory is True
+    assert k.decide() == Element.DIT
+    k.run_element(Element.DIT, dit_pad=False, dah_pad=False)
+    assert k.decide() == Element.IDLE
+    return "".join(k.output)
+
+
 def mode_a_mid_element_tap_inserts_dit() -> str:
     """Mode A: during dah, rising edge on dit inserts dit even if tip released before gap."""
     k = Keyer(Mode.A)
@@ -194,6 +223,8 @@ def main() -> None:
         ("Mode A gap release", mode_a_gap_release_no_extra, "-"),
         ("Mode B gap bonus dit", mode_b_gap_release_bonus_dit, "-."),
         ("Mode A edge insert dit", mode_a_mid_element_tap_inserts_dit, "-."),
+        ("Mode A short squeeze", mode_a_short_squeeze_no_trailer, "-"),
+        ("Mode B short squeeze", mode_b_short_squeeze_trailer, "-."),
     ]
     failed = 0
     for name, fn, expected in tests:

@@ -5,7 +5,7 @@
 //
 // This work is licensed under CC BY-SA 4.0
 //
-// Last Revision: 11 May 2025
+// Last Revision: 20 Oct 2026
 // For Rev C PCB
 //
 // A basic memory Morse Code keyer for use with paddles.
@@ -75,7 +75,7 @@
 #include <avr/power.h>
 #include <avr/wdt.h>
 
-#define FIRMWARE_VERSION "11 May 2025"
+#define FIRMWARE_VERSION "20 Oct 2026"
 
 // Pin defines
 #define SPEED_INPUT PIN_PB5
@@ -233,6 +233,14 @@ void update_iambic_memory()
     }
   }
 
+  // Mode A: a squeeze edge must not survive dual release, or A and B both send a trailing element.
+  // A tap still inserts while the other paddle stays closed.
+  if (keyer_mode == Iambic::A && !dit_paddle_down() && !dah_paddle_down())
+  {
+    dit_memory = false;
+    dah_memory = false;
+  }
+
   clear_paddle_edges();
 }
 
@@ -364,6 +372,7 @@ bool process_keyer_sm(void *)
             Serial.println("EtherKeyer Mini");
             Serial.print("Firmware ");
             Serial.println(FIRMWARE_VERSION);
+            Serial.println(keyer_mode == Iambic::B ? "Iambic B" : "Iambic A");
           }
           last_button = Button::HOLD;
           break;
@@ -525,11 +534,13 @@ bool process_keyer_sm(void *)
               break;
             case 'A':
               keyer_mode = Iambic::A;
-              EEPROM.put(EEP_KEYER_MODE, keyer_mode);
+              EEPROM.put(EEP_KEYER_MODE, static_cast<uint8_t>(Iambic::A));
+              Serial.println("Iambic A");
               break;
             case 'B':
               keyer_mode = Iambic::B;
-              EEPROM.put(EEP_KEYER_MODE, keyer_mode);
+              EEPROM.put(EEP_KEYER_MODE, static_cast<uint8_t>(Iambic::B));
+              Serial.println("Iambic B");
               break;
             case 'S':
               // sidetone_active = true;
